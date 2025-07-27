@@ -6,8 +6,11 @@
  */
 
 import type { TradingStrategy, MarketData, TradingOrder, BacktestResult } from '../types';
-import { AlpacaTradingService } from '../services/alpaca/AlpacaTradingService';
-import { AlpacaMarketData } from '../services/alpaca/AlpacaMarketData';
+import type { Account } from '../types/trading';
+import { AssetClass } from '../types/trading';
+import type { OptionContract } from '../types/options';
+import { AlpacaTradingService as _AlpacaTradingService } from '../services/alpaca/AlpacaTradingService';
+import { AlpacaMarketData as _AlpacaMarketData } from '../services/alpaca/AlpacaMarketData';
 import { BlackScholesEngine } from '../utils/options-pricing';
 
 // Define missing types for now
@@ -23,10 +26,6 @@ interface ValidationResult {
   errors?: string[];
 }
 
-interface Account {
-  equity: number;
-  buyingPower: number;
-}
 
 interface Position {
   symbol: string;
@@ -72,7 +71,7 @@ interface Greeks {
 }
 
 // Placeholder for implied volatility calculation
-const calculateImpliedVolatility = (price: number, params: any): number => 
+const calculateImpliedVolatility = (_price: number, _params: any): number => 
   // Simplified IV calculation
    0.25
 ;
@@ -294,7 +293,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
   private async updatePositionGreeks(): Promise<void> {
     const underlyingPrice = await this.marketData.getStockPrice(this.config.underlyingSymbol);
 
-    for (const [symbol, position] of Object.entries(this.positions)) {
+    for (const [_symbol, position] of Object.entries(this.positions)) {
       if (position.assetClass === AssetClass.US_OPTION && position.position !== 0) {
         // Get option quote
         const quote = await this.marketData.getOptionQuote(symbol);
@@ -336,11 +335,11 @@ export class GammaScalpingStrategy extends TradingStrategy {
   private calculatePortfolioDelta(): number {
     let totalDelta = 0;
 
-    for (const [symbol, position] of Object.entries(this.positions)) {
-      if (position.assetClass === 'us_equity') {
+    for (const [_symbol, position] of Object.entries(this.positions)) {
+      if (position.assetClass === AssetClass.US_EQUITY) {
         // Stock has delta of 1
         totalDelta += position.position;
-      } else if (position.assetClass === 'us_option' && position.greeks) {
+      } else if (position.assetClass === AssetClass.US_OPTION && position.greeks) {
         // Option delta scaled by position and contract size
         totalDelta += position.greeks.delta * position.position * (position.contractSize || 100);
       }
@@ -388,7 +387,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
     const signals: Signal[] = [];
     const underlyingPrice = await this.marketData.getStockPrice(this.config.underlyingSymbol);
 
-    for (const [symbol, position] of Object.entries(this.positions)) {
+    for (const [_symbol, position] of Object.entries(this.positions)) {
       if (position.assetClass !== AssetClass.US_OPTION || position.position === 0) {
         continue;
       }
@@ -451,7 +450,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
   private async executeInitialTrades(): Promise<void> {
     console.log('Executing initial option trades');
 
-    for (const [symbol, position] of Object.entries(this.positions)) {
+    for (const [_symbol, position] of Object.entries(this.positions)) {
       if (position.assetClass === AssetClass.US_OPTION && position.initialPosition !== 0) {
         const order: Order = {
           symbol,

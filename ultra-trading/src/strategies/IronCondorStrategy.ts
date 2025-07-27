@@ -362,9 +362,7 @@ export class IronCondorStrategy extends TradingStrategy {
     }
 
     // Select option with best theta (least negative for income generation)
-    return validOptions.reduce((best, current) => {
-      return (current.greeks!.theta > best.greeks!.theta) ? current : best;
-    });
+    return validOptions.reduce((best, current) => (current.greeks!.theta > best.greeks!.theta) ? current : best);
   }
 
   /**

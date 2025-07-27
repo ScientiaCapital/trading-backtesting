@@ -13,6 +13,12 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
+    /* Module Resolution */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Type Checking - ULTRA STRICT MODE */
     "strict": true,
     "exactOptionalPropertyTypes": true,
@@ -50,7 +56,8 @@
   "include": [
     "src/**/*",
     "tests/**/*",
-    "migrations/**/*"
+    "migrations/**/*",
+    "scripts/**/*"
   ],
   "exclude": [
     "node_modules",

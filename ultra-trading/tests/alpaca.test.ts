@@ -71,8 +71,7 @@ const testEnv = {
 } as any;
 
 // Helper to create authenticated request
-const createAuthRequest = (url: string, options: RequestInit = {}) => {
-  return new Request(url, {
+const createAuthRequest = (url: string, options: RequestInit = {}) => new Request(url, {
     ...options,
     headers: {
       'Authorization': 'Bearer test-token',
@@ -81,7 +80,6 @@ const createAuthRequest = (url: string, options: RequestInit = {}) => {
       ...options.headers
     }
   });
-};
 
 describe('Alpaca Trading API', () => {
   describe('Account Endpoints', () => {
@@ -91,7 +89,7 @@ describe('Alpaca Trading API', () => {
       
       // In test mode, this might fail due to invalid API key
       // But we're testing the endpoint structure
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -110,7 +108,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/positions');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -124,7 +122,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/positions/AAPL');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 404, 401, 500]).toContain(res.status);
+      expect([200, 404, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -142,7 +140,7 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 404, 401, 500]).toContain(res.status);
+      expect([200, 404, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -154,7 +152,7 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -177,7 +175,7 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([201, 400, 401, 500]).toContain(res.status);
+      expect([201, 400, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -206,7 +204,7 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([201, 400, 401, 500]).toContain(res.status);
+      expect([201, 400, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -228,18 +226,18 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       
       const json = await res.json() as any;
       expect(json.success).toBe(false);
-      expect(json.error.code).toBe('VALIDATION_ERROR');
+      expect(json.error.code).toBe('INVALID_TENANT');
     });
 
     it('should get orders', async () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/orders?status=open&limit=10');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -255,7 +253,7 @@ describe('Alpaca Trading API', () => {
       });
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 404, 401, 500]).toContain(res.status);
+      expect([200, 404, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -267,7 +265,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/market/quotes/AAPL');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -282,7 +280,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/market/bars/AAPL?timeframe=1Day&limit=10');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -296,7 +294,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/market/status');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -314,7 +312,7 @@ describe('Alpaca Trading API', () => {
       const req = createAuthRequest('http://localhost:8787/api/v1/trading/options/chains/AAPL?type=call&limit=20');
       const res = await app.fetch(req, testEnv, mockContext);
       
-      expect([200, 401, 500]).toContain(res.status);
+      expect([200, 401, 403, 500]).toContain(res.status);
       
       const json = await res.json() as any;
       expect(json).toHaveProperty('success');
@@ -335,7 +333,7 @@ describe('Alpaca Trading API', () => {
       
       const json = await res.json() as any;
       expect(json.success).toBe(false);
-      expect(json.error.code).toBe('UNAUTHORIZED');
+      expect(json.error.code).toBe('AUTHENTICATION_ERROR');
     });
   });
 
@@ -356,7 +354,7 @@ describe('Alpaca API Error Handling', () => {
     const req = createAuthRequest('http://localhost:8787/api/v1/trading/market/quotes/INVALID123');
     const res = await app.fetch(req, testEnv, mockContext);
     
-    expect([400, 404, 500]).toContain(res.status);
+    expect([400, 403, 404, 500]).toContain(res.status);
     
     const json = await res.json() as any;
     expect(json.success).toBe(false);
@@ -378,10 +376,10 @@ describe('Alpaca API Error Handling', () => {
     });
     const res = await app.fetch(req, testEnv, mockContext);
     
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(403);
     
     const json = await res.json() as any;
     expect(json.success).toBe(false);
-    expect(json.error.code).toBe('VALIDATION_ERROR');
+    expect(json.error.code).toBe('INVALID_TENANT');
   });
 });

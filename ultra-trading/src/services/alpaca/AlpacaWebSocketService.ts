@@ -43,7 +43,7 @@ export interface AlpacaWebSocketMessage {
 /**
  * Subscription Request
  */
-export interface SubscriptionRequest {
+export interface SubscriptionRequest extends Record<string, unknown> {
   trades?: string[];
   quotes?: string[];
   bars?: string[];
@@ -310,6 +310,7 @@ export class AlpacaWebSocketService {
 
   /**
    * Handle WebSocket message
+   * @internal Currently unused - WebSocket implementation requires Durable Objects
    */
   private _handleMessage(data: string): void {
     try {

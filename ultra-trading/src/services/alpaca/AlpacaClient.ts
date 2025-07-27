@@ -5,13 +5,26 @@
 
 import type { CloudflareBindings } from '../../types';
 import { AppError, retry, timeout } from '../../utils';
+import type { 
+  Account, 
+  Position, 
+  Order, 
+  Clock, 
+  OrderStatus, 
+  OrderSide, 
+  OrderType, 
+  TimeInForce,
+  Asset,
+  Calendar
+} from '../../types/trading';
+import type { OptionContract, OptionChainRequest } from '../../types/options';
 
 /**
  * Alpaca API Configuration
  */
 export interface AlpacaConfig {
   apiKeyId: string;
-  apiSecret?: string;
+  apiSecret?: string | undefined;
   baseUrl: string;
   dataUrl: string;
   streamUrl: string;
@@ -333,5 +346,187 @@ export class AlpacaClient {
    */
   isPaperTrading(): boolean {
     return this.config.isPaper;
+  }
+
+  // Trading API Methods
+
+  /**
+   * Get account information
+   */
+  async getAccount(): Promise<Account> {
+    return this.tradingRequest<Account>('/v2/account');
+  }
+
+  /**
+   * Get all positions
+   */
+  async getPositions(): Promise<Position[]> {
+    return this.tradingRequest<Position[]>('/v2/positions');
+  }
+
+  /**
+   * Get specific position
+   */
+  async getPosition(symbol: string): Promise<Position> {
+    return this.tradingRequest<Position>(`/v2/positions/${symbol}`);
+  }
+
+  /**
+   * Submit an order
+   */
+  async submitOrder(params: {
+    symbol: string;
+    qty?: number;
+    notional?: number;
+    side: OrderSide;
+    type: OrderType;
+    time_in_force: TimeInForce;
+    limit_price?: number;
+    stop_price?: number;
+    trail_price?: number;
+    trail_percent?: number;
+    extended_hours?: boolean;
+    client_order_id?: string;
+    order_class?: string;
+    take_profit?: {
+      limit_price: number;
+    };
+    stop_loss?: {
+      stop_price: number;
+      limit_price?: number;
+    };
+  }): Promise<Order> {
+    return this.tradingRequest<Order>('/v2/orders', {
+      method: 'POST',
+      body: params as Record<string, unknown>
+    });
+  }
+
+  /**
+   * Get orders
+   */
+  async getOrders(params?: {
+    status?: OrderStatus;
+    limit?: number;
+    after?: string;
+    until?: string;
+    direction?: 'asc' | 'desc';
+    nested?: boolean;
+    symbols?: string;
+  }): Promise<Order[]> {
+    return this.tradingRequest<Order[]>('/v2/orders', {
+      queryParams: params as Record<string, string | number | boolean>
+    });
+  }
+
+  /**
+   * Cancel an order
+   */
+  async cancelOrder(orderId: string): Promise<void> {
+    await this.tradingRequest(`/v2/orders/${orderId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
+   * Close a position
+   */
+  async closePosition(symbol: string, qty?: number): Promise<Order> {
+    const params: Record<string, unknown> = {};
+    if (qty !== undefined) {
+      params['qty'] = qty;
+    }
+    return this.tradingRequest<Order>(`/v2/positions/${symbol}`, {
+      method: 'DELETE',
+      body: params
+    });
+  }
+
+  /**
+   * Close all positions
+   */
+  async closeAllPositions(cancelOrders?: boolean): Promise<Order[]> {
+    const params: Record<string, unknown> = {};
+    if (cancelOrders !== undefined) {
+      params['cancel_orders'] = cancelOrders;
+    }
+    return this.tradingRequest<Order[]>('/v2/positions', {
+      method: 'DELETE',
+      body: params
+    });
+  }
+
+  /**
+   * Get clock
+   */
+  async getClock(): Promise<Clock> {
+    return this.tradingRequest<Clock>('/v2/clock');
+  }
+
+  /**
+   * Get calendar
+   */
+  async getCalendar(params?: {
+    start?: string;
+    end?: string;
+  }): Promise<Calendar[]> {
+    return this.tradingRequest<Calendar[]>('/v2/calendar', {
+      queryParams: params as Record<string, string | number | boolean>
+    });
+  }
+
+  /**
+   * Get assets
+   */
+  async getAssets(params?: {
+    status?: 'active' | 'inactive';
+    asset_class?: string;
+    exchange?: string;
+  }): Promise<Asset[]> {
+    return this.tradingRequest<Asset[]>('/v2/assets', {
+      queryParams: params as Record<string, string | number | boolean>
+    });
+  }
+
+  /**
+   * Get option contracts
+   */
+  async getOptionContracts(params: OptionChainRequest): Promise<OptionContract[]> {
+    const queryParams: Record<string, string | number | boolean> = {
+      underlying_symbol: params.underlyingSymbol
+    };
+    
+    if (params.optionType) queryParams['option_type'] = params.optionType;
+    if (params.minStrike) queryParams['min_strike'] = params.minStrike;
+    if (params.maxStrike) queryParams['max_strike'] = params.maxStrike;
+    if (params.minExpiration) queryParams['min_expiration'] = params.minExpiration.toString();
+    if (params.maxExpiration) queryParams['max_expiration'] = params.maxExpiration.toString();
+    if (params.limit) queryParams['limit'] = params.limit;
+    
+    return this.tradingRequest<OptionContract[]>('/v2/options/contracts', {
+      queryParams
+    });
+  }
+
+  /**
+   * Market data property for accessing market data methods
+   */
+  get marketData() {
+    const self = this;
+    return {
+      async getQuotes(symbol: string): Promise<{ quotes: Array<{ ap: number; as: number; bp: number; bs: number; t: string }> }> {
+        return self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
+      },
+      async getBars(symbol: string, params?: {
+        start?: string;
+        end?: string;
+        timeframe?: string;
+        limit?: number;
+      }): Promise<{ bars: Array<{ t: string; o: number; h: number; l: number; c: number; v: number }> }> {
+        return self.dataRequest(`/v2/stocks/${symbol}/bars`, {
+          queryParams: params as Record<string, string | number | boolean>
+        });
+      }
+    };
   }
 }

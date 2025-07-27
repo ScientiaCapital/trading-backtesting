@@ -4,8 +4,8 @@
  */
 
 import { MarketData, StockQuote, OptionQuote } from '@/types/market-data';
-import { AlpacaService } from './trading-client';
-import { withRetry } from '@/utils/retry';
+import { AlpacaService } from './alpaca/trading-client';
+import { withRetry as _withRetry } from '@/utils/retry';
 
 export interface MarketDataConfig {
   baseUrl?: string;
@@ -18,8 +18,8 @@ export interface MarketDataConfig {
  * Provides access to real-time and historical market data
  */
 export class MarketDataService {
-  private readonly config: MarketDataConfig;
-  private readonly alpaca: AlpacaService;
+  private readonly _config: MarketDataConfig;
+  private readonly _alpaca: AlpacaService;
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5000; // 5 seconds
 

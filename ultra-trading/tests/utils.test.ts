@@ -55,16 +55,16 @@ describe('Date Utilities', () => {
   });
 
   it('should add days to date', () => {
-    const date = new Date('2024-01-01');
+    const date = new Date('2024-01-01T00:00:00.000Z');
     const newDate = addDays(date, 5);
     
-    expect(newDate.getDate()).toBe(6);
+    expect(newDate.getUTCDate()).toBe(6);
   });
 
   it('should identify business days', () => {
-    const monday = new Date('2024-01-01'); // Monday
-    const saturday = new Date('2024-01-06'); // Saturday
-    const sunday = new Date('2024-01-07'); // Sunday
+    const monday = new Date('2024-01-01T12:00:00.000Z'); // Monday
+    const saturday = new Date('2024-01-06T12:00:00.000Z'); // Saturday
+    const sunday = new Date('2024-01-07T12:00:00.000Z'); // Sunday
     
     expect(isBusinessDay(monday)).toBe(true);
     expect(isBusinessDay(saturday)).toBe(false);

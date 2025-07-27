@@ -37,6 +37,9 @@ export default [
         // TypeScript types
         ExecutionContext: 'readonly',
         ExportedHandler: 'readonly',
+        // Cloudflare Workers specific globals
+        btoa: 'readonly',
+        atob: 'readonly',
       },
     },
     plugins: {

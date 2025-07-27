@@ -73,12 +73,12 @@ export class CredentialManager {
     return JSON.parse(decoded);
   }
 
-  async getCredentials(tenantId: string, provider: string): Promise<string> {
+  async getCredentials(_tenantId: string, _provider: string): Promise<string> {
     // TODO: Fetch from D1 database
     throw new Error('Not implemented');
   }
 
-  async saveCredentials(tenantId: string, provider: string, encrypted: string): Promise<void> {
+  async saveCredentials(_tenantId: string, _provider: string, _encrypted: string): Promise<void> {
     // TODO: Save to D1 database
     throw new Error('Not implemented');
   }

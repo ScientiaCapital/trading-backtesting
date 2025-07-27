@@ -407,9 +407,7 @@ export class WheelStrategy extends TradingStrategy {
     );
 
     // Select option with best annualized return
-    return optionsWithReturns.reduce((best, current) => {
-      return current.returnIfCalled > best.returnIfCalled ? current : best;
-    }).option;
+    return optionsWithReturns.reduce((best, current) => current.returnIfCalled > best.returnIfCalled ? current : best).option;
   }
 
   /**

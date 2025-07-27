@@ -12,7 +12,7 @@ import {
   createApiResponse,
   createErrorResponse,
   createError,
-  AppError,
+  AppError as _AppError,
   NotFoundError,
   ValidationError,
   createLogger
@@ -149,7 +149,7 @@ tradingRoutes.post('/orders', requireRole(['admin', 'trader']), async (c) => {
       orderId: order.id,
       symbol: order.symbol,
       side: order.side,
-      quantity: order.qty
+      quantity: (order as any).qty || order.quantity
     });
     
     return c.json(createApiResponse(order), 201);
@@ -336,11 +336,11 @@ tradingRoutes.get('/options/chains/:symbol', async (c) => {
     
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
     const options = await alpaca.getOptionContracts({
-      underlying_symbols: symbol,
+      underlyingSymbol: symbol,
       ...query
     });
     
-    logger.info('Option contracts retrieved', { symbol, count: options.option_contracts.length });
+    logger.info('Option contracts retrieved', { symbol, count: options.length });
     return c.json(createApiResponse(options));
   } catch (error) {
     logger.error('Failed to get option contracts', { symbol, error: (error as Error).message });
