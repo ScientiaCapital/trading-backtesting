@@ -11,7 +11,7 @@ import { AppError, retry, timeout } from '../../utils';
  */
 export interface AlpacaConfig {
   apiKeyId: string;
-  apiSecret: string;
+  apiSecret?: string;
   baseUrl: string;
   dataUrl: string;
   streamUrl: string;
@@ -79,27 +79,27 @@ export class AlpacaClient {
    * Initialize Alpaca configuration
    */
   private initializeConfig(): AlpacaConfig {
-    const apiKeyId = this.env.ALPACA_API_KEY || 'PKDINXYX5XL2HL5P5TNV';
-    const apiSecret = this.env.ALPACA_SECRET_KEY;
+    const apiKeyId = this.env.ALPACA_API_KEY;
+    const apiSecret = this.env.ALPACA_API_SECRET;
 
-    if (!apiSecret) {
+    if (!apiKeyId) {
       throw new AppError(
         'ALPACA_CONFIG_ERROR',
-        'Alpaca API secret key not configured',
+        'Alpaca API key not configured',
         500
       );
     }
 
     const isPaper = this.env.ENVIRONMENT !== 'production';
     const baseUrl = isPaper 
-      ? 'https://paper-api.alpaca.markets/v2'
-      : 'https://api.alpaca.markets/v2';
+      ? 'https://paper-api.alpaca.markets'
+      : 'https://api.alpaca.markets';
     const dataUrl = isPaper
-      ? 'https://data.alpaca.markets/v2'
-      : 'https://data.alpaca.markets/v2';
+      ? 'https://data.alpaca.markets'
+      : 'https://data.alpaca.markets';
     const streamUrl = isPaper
-      ? 'wss://stream.data.alpaca.markets/v2'
-      : 'wss://stream.data.alpaca.markets/v2';
+      ? 'wss://stream.data.alpaca.markets'
+      : 'wss://stream.data.alpaca.markets';
 
     return {
       apiKeyId,
@@ -115,11 +115,17 @@ export class AlpacaClient {
    * Get authentication headers
    */
   private getAuthHeaders(): Record<string, string> {
-    return {
+    const headers: Record<string, string> = {
       'APCA-API-KEY-ID': this.config.apiKeyId,
-      'APCA-API-SECRET-KEY': this.config.apiSecret,
       'Content-Type': 'application/json'
     };
+    
+    // Add secret key if available
+    if (this.config.apiSecret) {
+      headers['APCA-API-SECRET-KEY'] = this.config.apiSecret;
+    }
+    
+    return headers;
   }
 
   /**

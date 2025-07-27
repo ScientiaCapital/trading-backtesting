@@ -26,9 +26,14 @@ A next-generation trading platform combining fastquant (backtesting) with Alpaca
   - ✅ Strategy conversion analysis completed with TypeScript examples
   - ✅ Mathematical utilities for options pricing implemented
   - ✅ Gamma Scalping strategy converted to TypeScript
-  - ✅ Notebook to TypeScript converter script created
-  - 🚧 Cloudflare Workers project initialization in progress
-  - 🚧 Remaining strategies need conversion (Iron Condor, Wheel)
+  - ✅ Iron Condor strategy fully implemented in TypeScript
+  - ✅ Wheel strategy fully implemented in TypeScript
+  - ✅ Cloudflare Workers project fully initialized
+  - ✅ D1 Database and KV storage configured
+  - ✅ Alpaca Paper Trading API integrated and tested
+  - ✅ Authentication working with new credentials
+  - 🚧 Real-time trading dashboard in progress
+  - 🚧 Python quant agents need TypeScript conversion
 - **Target State**: Unified platform on Cloudflare Workers with multi-tenant SaaS architecture
 - **GitHub Repository**: https://github.com/ScientiaCapital/trading-backtesting
 - **Organization**: ScientiaCapital
@@ -41,19 +46,40 @@ A next-generation trading platform combining fastquant (backtesting) with Alpaca
 trading-backtesting/
 ├── fastquant/                      # Python backtesting library
 ├── alpaca-py/                      # Alpaca trading SDK  
-│   └── examples/options/           # Python strategy notebooks to convert
+│   └── examples/options/           # Original Python notebooks
+├── quant-agents/                   # Python agents to convert
+│   └── personal_trading_system.py  # 6 specialized trading agents
 ├── trading_env/                    # Virtual environment
 ├── context-engineering-intro/      # Context engineering templates
 ├── docs/                           # Documentation
 │   └── STRATEGY_CONVERSION_ANALYSIS.md  # Conversion guide
-└── ultra-trading/                  # Cloudflare Workers app
+└── ultra-trading/                  # Cloudflare Workers app ✅
     ├── src/
-    │   ├── strategies/             # TypeScript strategies
-    │   │   └── GammaScalpingStrategy.ts
-    │   └── utils/
-    │       └── options-pricing.ts  # Mathematical utilities
-    └── scripts/
-        └── convert-notebook.ts     # Jupyter to TypeScript converter
+    │   ├── api/                    # API routes
+    │   │   ├── index.ts           # Main router
+    │   │   └── trading.ts         # Alpaca trading endpoints
+    │   ├── services/              
+    │   │   ├── alpaca/            # Alpaca integration
+    │   │   │   ├── AlpacaClient.ts
+    │   │   │   ├── AlpacaMarketData.ts
+    │   │   │   ├── AlpacaTradingService.ts
+    │   │   │   └── AlpacaWebSocketService.ts
+    │   │   ├── database.ts        # D1 service
+    │   │   ├── market-data.ts     # Market data service
+    │   │   └── ai.ts              # AI service (Claude/Gemini)
+    │   ├── strategies/             # TypeScript strategies ✅
+    │   │   ├── GammaScalpingStrategy.ts
+    │   │   ├── IronCondorStrategy.ts
+    │   │   └── WheelStrategy.ts
+    │   ├── utils/
+    │   │   └── options-pricing.ts  # Black-Scholes engine
+    │   └── index.ts               # Worker entry point
+    ├── migrations/                 # D1 database schemas
+    ├── scripts/
+    │   ├── convert-notebook.ts     # Jupyter converter
+    │   ├── test-alpaca.ts         # Alpaca connection test
+    │   └── debug-alpaca-auth.ts   # Auth debugger
+    └── wrangler.jsonc             # Cloudflare config
 ```
 
 ## 🔄 Strategy Conversion Resources
@@ -107,33 +133,44 @@ source trading_env/bin/activate
 pip install alpaca-py anthropic google-generativeai langchain chromadb
 cd fastquant && pip install -r python/requirements.txt
 
-# Convert notebooks to TypeScript
+# Cloudflare Workers Development
 cd ultra-trading
-ts-node scripts/convert-notebook.ts ../alpaca-py/examples/options/options-iron-condor.ipynb src/strategies/IronCondorStrategy.ts
+npm install
+npm run dev                     # Start local development server
+npm run test:alpaca            # Test Alpaca API connection
+npm run build                  # Build for production
+npm run deploy                 # Deploy to Cloudflare
+npm run validate               # Run all checks (lint, type-check, test)
 
-# Future Cloudflare commands
-npx wrangler dev --local --persist
+# Database Commands
+npx wrangler d1 execute ultra-trading --local --file=./migrations/001_initial_schema.sql
 npx wrangler d1 execute ultra-trading --local --command "SELECT * FROM users"
-npx wrangler deploy --env production
 
 # Testing
-python -m pytest tests/ -v  # Python tests
-npm test                    # TypeScript tests
+python -m pytest tests/ -v     # Python tests
+npm test                       # TypeScript tests
+npm run test:watch            # Watch mode
 
-# AI SDK Usage
+# Environment Variables
+export ALPACA_API_KEY="PKYN9OAQHP1IR05GGAGL"
+export ALPACA_API_SECRET="tfezhnS1NvEtu8eT6BkW3fLd1wKIi0Ygc5HILoBl"
 export ANTHROPIC_API_KEY="sk-ant-..."
-export GOOGLE_API_KEY="..."
+export GOOGLE_API_KEY="AIzaSy..."
 ```
 
 ## ⚡ Key Integration Points
 
-- **Notebooks to Convert**: `alpaca-py/examples/options/*.ipynb`
-  - ✅ options-gamma-scalping.ipynb (COMPLETED)
-  - 🚧 options-iron-condor.ipynb (Priority 2)
-  - 🚧 options-wheel-strategy.ipynb (Priority 3)
-  - 📋 options-bull-call-spread.ipynb
-  - 📋 options-bear-put-spread.ipynb
-  - 📋 options-calendar-spread.ipynb
+- **Strategies Completed**: `ultra-trading/src/strategies/`
+  - ✅ GammaScalpingStrategy.ts (with full Greeks calculation)
+  - ✅ IronCondorStrategy.ts (four-leg options strategy)
+  - ✅ WheelStrategy.ts (cash-secured puts/covered calls)
+- **Python Agents to Convert**: `quant-agents/personal_trading_system.py`
+  - 🚧 Alpha Signal Generator Agent
+  - 🚧 Risk Management Agent
+  - 🚧 Execution Agent
+  - 🚧 Market Data Agent
+  - 🚧 Compliance Agent
+  - 🚧 Infrastructure Agent
 - **Fastquant Strategies**: `fastquant/python/fastquant/strategies/`
 - **Backtest Engine**: `fastquant/python/fastquant/backtest/backtest.py`
 

@@ -72,10 +72,10 @@ interface Greeks {
 }
 
 // Placeholder for implied volatility calculation
-const calculateImpliedVolatility = (price: number, params: any): number => {
+const calculateImpliedVolatility = (price: number, params: any): number => 
   // Simplified IV calculation
-  return 0.25;
-};
+   0.25
+;
 
 export interface GammaScalpingConfig {
   underlyingSymbol: string;

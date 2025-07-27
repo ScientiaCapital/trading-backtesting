@@ -169,7 +169,7 @@ export class AlpacaTradingService {
   async getAccount(): Promise<AlpacaAccount> {
     this.logger.info('Fetching account information');
     
-    const account = await this.client.tradingRequest<AlpacaAccount>('/account');
+    const account = await this.client.tradingRequest<AlpacaAccount>('/v2/account');
     
     this.logger.info('Account information retrieved', {
       accountId: account.id,
@@ -186,7 +186,7 @@ export class AlpacaTradingService {
   async getPositions(): Promise<AlpacaPosition[]> {
     this.logger.info('Fetching positions');
     
-    const positions = await this.client.tradingRequest<AlpacaPosition[]>('/positions');
+    const positions = await this.client.tradingRequest<AlpacaPosition[]>('/v2/positions');
     
     this.logger.info('Positions retrieved', {
       count: positions.length
@@ -200,7 +200,7 @@ export class AlpacaTradingService {
    */
   async getPosition(symbol: string): Promise<AlpacaPosition | null> {
     try {
-      const position = await this.client.tradingRequest<AlpacaPosition>(`/positions/${symbol}`);
+      const position = await this.client.tradingRequest<AlpacaPosition>(`/v2/positions/${symbol}`);
       return position;
     } catch (error) {
       if ((error as AppError).code === 'NOT_FOUND') {
@@ -222,7 +222,7 @@ export class AlpacaTradingService {
     }
     
     const order = await this.client.tradingRequest<AlpacaOrder>(
-      `/positions/${symbol}`,
+      `/v2/positions/${symbol}`,
       {
         method: 'DELETE',
         ...options
@@ -244,7 +244,7 @@ export class AlpacaTradingService {
     this.logger.warn('Closing all positions', { cancelOrders });
     
     const orders = await this.client.tradingRequest<AlpacaOrder[]>(
-      '/positions',
+      '/v2/positions',
       {
         method: 'DELETE',
         queryParams: { cancel_orders: cancelOrders }
@@ -288,7 +288,7 @@ export class AlpacaTradingService {
     }
 
     const order = await this.client.tradingRequest<AlpacaOrder>(
-      '/orders',
+      '/v2/orders',
       {
         method: 'POST',
         body: request as any
@@ -328,7 +328,7 @@ export class AlpacaTradingService {
     if (symbols) queryParams.symbols = symbols;
 
     const orders = await this.client.tradingRequest<AlpacaOrder[]>(
-      '/orders',
+      '/v2/orders',
       { queryParams }
     );
 
@@ -341,7 +341,7 @@ export class AlpacaTradingService {
   async getOrder(orderId: string, nested = false): Promise<AlpacaOrder | null> {
     try {
       const order = await this.client.tradingRequest<AlpacaOrder>(
-        `/orders/${orderId}`,
+        `/v2/orders/${orderId}`,
         { queryParams: { nested } }
       );
       return order;
@@ -374,7 +374,7 @@ export class AlpacaTradingService {
     this.logger.warn('Cancelling all orders');
     
     const cancelled = await this.client.tradingRequest<AlpacaOrder[]>(
-      '/orders',
+      '/v2/orders',
       { method: 'DELETE' }
     );
     
@@ -521,7 +521,7 @@ export class AlpacaTradingService {
       is_open: boolean;
       next_open: string;
       next_close: string;
-    }>('/clock');
+    }>('/v2/clock');
 
     return clock.is_open;
   }
@@ -531,7 +531,7 @@ export class AlpacaTradingService {
    */
   async getMarketCalendar(start: string, end: string): Promise<any[]> {
     const calendar = await this.client.tradingRequest<any[]>(
-      '/calendar',
+      '/v2/calendar',
       {
         queryParams: { start, end }
       }

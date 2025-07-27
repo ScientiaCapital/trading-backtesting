@@ -45,7 +45,7 @@ export interface CloudflareBindings {
   ANTHROPIC_API_KEY?: string;
   GOOGLE_AI_API_KEY?: string;
   ALPACA_API_KEY?: string;
-  ALPACA_SECRET_KEY?: string;
+  ALPACA_API_SECRET?: string;
 }
 
 /**

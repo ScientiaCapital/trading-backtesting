@@ -36,7 +36,7 @@
 		{
 			"binding": "DB",
 			"database_name": "ultra-trading",
-			"database_id": "placeholder-will-be-generated"
+			"database_id": "6617f40f-3242-4bd5-8e1b-cdb349bc9187"
 		}
 	],
 
@@ -47,8 +47,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "CACHE",
-			"id": "placeholder-will-be-generated",
-			"preview_id": "placeholder-preview-id"
+			"id": "25fceb22806042709a3351e2f4925c1a"
 		}
 	],
 
@@ -96,5 +95,15 @@
 	 */
 	"placement": {
 		"mode": "smart"
-	}
+	},
+
+	/**
+	 * Durable Objects Migrations
+	 */
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["TradingSession"]
+		}
+	]
 }
