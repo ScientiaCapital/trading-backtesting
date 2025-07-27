@@ -1,7 +1,15 @@
 /**
  * ULTRA Trading Platform - Cloudflare Workers Configuration
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
+ * 
+ * ⚠️ IMPORTANT: This is a WORKERS application, NOT Pages!
+ * 
+ * Deploy via CLI only:
+ *   wrangler deploy --env staging --minify
+ *   wrangler deploy --env production --minify
+ * 
+ * DO NOT use GitHub Pages integration - it will fail.
+ * 
+ * For more details: https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
