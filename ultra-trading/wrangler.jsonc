@@ -36,7 +36,7 @@
 		{
 			"binding": "DB",
 			"database_name": "ultra-trading",
-			"database_id": "6617f40f-3242-4bd5-8e1b-cdb349bc9187"
+			"database_id": "280bcf3c-0580-4756-a5a4-1706a0d32b06"
 		}
 	],
 
@@ -58,7 +58,7 @@
 	"r2_buckets": [
 		{
 			"binding": "DATA_BUCKET",
-			"bucket_name": "ultra-data"
+			"bucket_name": "ultra-data-development"
 		}
 	],
 
@@ -105,5 +105,87 @@
 			"tag": "v1",
 			"new_classes": ["TradingSession"]
 		}
-	]
+	],
+
+	/**
+	 * Environment Configurations
+	 */
+	"env": {
+		"staging": {
+			"name": "ultra-trading-staging",
+			"vars": {
+				"ENVIRONMENT": "staging",
+				"LOG_LEVEL": "info",
+				"API_VERSION": "v1"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "ultra-trading-staging",
+					"database_id": "8b99c89f-c0e5-4880-872a-84ce05129863"
+				}
+			],
+			"kv_namespaces": [
+				{
+					"binding": "CACHE",
+					"id": "25fceb22806042709a3351e2f4925c1a"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "DATA_BUCKET",
+					"bucket_name": "ultra-data-staging"
+				}
+			],
+			"ai": {
+				"binding": "AI"
+			},
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "TRADING_SESSION",
+						"class_name": "TradingSession"
+					}
+				]
+			}
+		},
+		"production": {
+			"name": "ultra-trading",
+			"vars": {
+				"ENVIRONMENT": "production",
+				"LOG_LEVEL": "warn",
+				"API_VERSION": "v1"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "ultra-trading-production",
+					"database_id": "052978a3-bb33-4ff5-bfc3-a019b424edbc"
+				}
+			],
+			"kv_namespaces": [
+				{
+					"binding": "CACHE",
+					"id": "25fceb22806042709a3351e2f4925c1a"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "DATA_BUCKET",
+					"bucket_name": "ultra-data-production"
+				}
+			],
+			"ai": {
+				"binding": "AI"
+			},
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "TRADING_SESSION",
+						"class_name": "TradingSession"
+					}
+				]
+			}
+		}
+	}
 }

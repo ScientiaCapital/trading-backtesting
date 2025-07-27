@@ -2,6 +2,8 @@
  * Trading Strategy Types
  */
 
+export type { Account } from './trading';
+
 export interface MarketData {
   symbol: string;
   price: number;

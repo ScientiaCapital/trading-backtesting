@@ -1,0 +1,2 @@
+# This file prevents GitHub Pages from trying to build this repository
+# This is a Cloudflare Workers application, not a static site

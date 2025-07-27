@@ -97,6 +97,11 @@ app.get('/ping', async (c) => c.json({
   }));
 
 /**
+ * Simple message endpoint for demo HTML page
+ */
+app.get('/message', async (c) => c.text('🚀 ULTRA Trading Platform is LIVE! Welcome to the future of trading.'));
+
+/**
  * System Status Endpoint
  * Provides detailed system information
  */

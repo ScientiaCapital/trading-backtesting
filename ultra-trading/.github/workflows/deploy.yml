@@ -1,0 +1,63 @@
+# GitHub Actions Workflow for ULTRA Trading Platform
+# 
+# ⚠️ MANUAL DEPLOYMENT ONLY
+# This repository is configured for manual Cloudflare Workers deployment via CLI.
+# Automatic deployments are disabled to prevent conflicts with Pages.
+#
+# To deploy:
+# 1. Run locally: npm run deploy:staging
+# 2. Test staging environment
+# 3. Run locally: npm run deploy:production
+#
+# DO NOT enable automatic deployments without updating this workflow.
+
+name: Manual Deployment Notice
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  notice:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Notice
+        run: |
+          echo "🚨 MANUAL DEPLOYMENT REQUIRED"
+          echo ""
+          echo "This is a Cloudflare Workers application."
+          echo "Deploy manually using:"
+          echo ""
+          echo "  npm run deploy:staging    # Deploy to staging"
+          echo "  npm run deploy:production # Deploy to production"
+          echo ""
+          echo "Current deployments:"
+          echo "  Production: https://ultra-trading.tkipper.workers.dev"
+          echo "  Staging: https://ultra-trading-staging.tkipper.workers.dev"
+          echo ""
+          echo "Do NOT enable automatic deployments via Pages."
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run type check
+        run: npm run type-check
+        
+      - name: Run linting
+        run: npm run lint:check
+        
+      - name: Run tests
+        run: npm test

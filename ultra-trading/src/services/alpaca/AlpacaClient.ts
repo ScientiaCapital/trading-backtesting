@@ -514,6 +514,18 @@ export class AlpacaClient {
   get marketData() {
     const self = this;
     return {
+      async getLatestQuote(symbol: string): Promise<{ symbol: string; bid_price: number; ask_price: number; bid_size: number; ask_size: number; timestamp: string }> {
+        const response = await self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
+        const quote = response.quote;
+        return {
+          symbol,
+          bid_price: quote.bp,
+          ask_price: quote.ap,
+          bid_size: quote.bs,
+          ask_size: quote.as,
+          timestamp: quote.t
+        };
+      },
       async getQuotes(symbol: string): Promise<{ quotes: Array<{ ap: number; as: number; bp: number; bs: number; t: string }> }> {
         return self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
       },

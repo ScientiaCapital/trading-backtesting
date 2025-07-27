@@ -5,7 +5,6 @@
 
 import { MarketData, StockQuote, OptionQuote } from '@/types/market-data';
 import { AlpacaService } from './alpaca/trading-client';
-import { withRetry as _withRetry } from '@/utils/retry';
 
 export interface MarketDataConfig {
   baseUrl?: string;
@@ -24,8 +23,8 @@ export class MarketDataService {
   private readonly CACHE_TTL = 5000; // 5 seconds
 
   constructor(alpaca: AlpacaService, config: MarketDataConfig = {}) {
-    this.alpaca = alpaca;
-    this.config = {
+    this._alpaca = alpaca;
+    this._config = {
       baseUrl: 'https://data.alpaca.markets',
       apiVersion: 'v2',
       maxRetries: 3,
@@ -149,10 +148,10 @@ export class MarketDataService {
    * Get historical data
    */
   async getHistoricalData(
-    symbol: string,
-    start: Date,
-    end: Date,
-    timeframe: '1Min' | '5Min' | '15Min' | '1Hour' | '1Day' = '1Day'
+    _symbol: string,
+    _start: Date,
+    _end: Date,
+    _timeframe: '1Min' | '5Min' | '15Min' | '1Hour' | '1Day' = '1Day'
   ): Promise<MarketData[]> {
     // TODO: Implement actual historical data fetching
     return [];

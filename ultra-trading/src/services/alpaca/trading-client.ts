@@ -3,16 +3,18 @@
  * Multi-tenant wrapper for Alpaca Trading API with encryption
  */
 
-import { 
+import type { 
   Order, 
   Position, 
-  Account, 
+  Account
+} from '@/types/trading';
+import {
   AssetClass,
   OrderSide,
   OrderType,
   TimeInForce
 } from '@/types/trading';
-import { OptionContract, OptionChainRequest } from '@/types/options';
+import type { OptionContract, OptionChainRequest } from '@/types/options';
 import { CredentialManager } from '@/services/security/credential-manager';
 import { RateLimiter } from '@/utils/rate-limiter';
 import { withRetry } from '@/utils/retry';

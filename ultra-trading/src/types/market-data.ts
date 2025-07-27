@@ -32,4 +32,4 @@ export interface OptionQuote {
   timestamp: Date;
 }
 
-export { MarketData } from './strategy';
+export type { MarketData } from './strategy';

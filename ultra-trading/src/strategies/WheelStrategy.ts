@@ -5,9 +5,11 @@
  * selling cash-secured puts and covered calls
  */
 
-import { TradingStrategy, Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
-import { Order, OrderSide, OrderType, AssetClass, Position } from '@/types/trading';
-import { OptionContract, OptionQuote } from '@/types/options';
+import { TradingStrategy } from '@/types/strategy';
+import type { Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
+import { AssetClass } from '@/types/trading';
+import type { Order, OrderSide, OrderType, Position } from '@/types/trading';
+import type { OptionContract, OptionQuote } from '@/types/options';
 import { AlpacaService } from '@/services/alpaca/trading-client';
 import { MarketDataService } from '@/services/market-data';
 import { BlackScholesEngine } from '@/utils/options-pricing';

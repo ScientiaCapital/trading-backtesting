@@ -2,7 +2,7 @@
  * Options Trading Types
  */
 
-import { Greeks } from '@/utils/options-pricing';
+import type { Greeks } from '@/utils/options-pricing';
 
 export interface OptionContract {
   id: string;
