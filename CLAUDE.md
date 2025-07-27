@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **This file (CLAUDE.md)** - Core rules and current state
 2. **ProjectContextEngineering.md** - Technical architecture and decisions
 3. **ProjectTasks.md** - Current tasks and fast start plan
+4. **docs/STRATEGY_CONVERSION_ANALYSIS.md** - Python to TypeScript strategy conversion guide
 
 **🚨 CRITICAL**: Always follow the Base PRP Template v2 methodology for ALL feature development.
 
@@ -17,11 +18,17 @@ A next-generation trading platform combining fastquant (backtesting) with Alpaca
 
 - **Always read `ProjectContextEngineering.md`** for technical decisions and architecture
 - **Check `ProjectTasks.md`** before starting work - tasks are prioritized and tracked there
+- **Review `docs/STRATEGY_CONVERSION_ANALYSIS.md`** for strategy conversion patterns
 - **Current State**: 
   - ✅ AI APIs fully configured (Anthropic Claude + Google Gemini)
   - ✅ All API keys secured in .env and tested
   - ✅ Python environment with all dependencies installed
+  - ✅ Strategy conversion analysis completed with TypeScript examples
+  - ✅ Mathematical utilities for options pricing implemented
+  - ✅ Gamma Scalping strategy converted to TypeScript
+  - ✅ Notebook to TypeScript converter script created
   - 🚧 Cloudflare Workers project initialization in progress
+  - 🚧 Remaining strategies need conversion (Iron Condor, Wheel)
 - **Target State**: Unified platform on Cloudflare Workers with multi-tenant SaaS architecture
 - **GitHub Repository**: https://github.com/ScientiaCapital/trading-backtesting
 - **Organization**: ScientiaCapital
@@ -32,11 +39,44 @@ A next-generation trading platform combining fastquant (backtesting) with Alpaca
 
 ```
 trading-backtesting/
-├── fastquant/           # Python backtesting library
-├── alpaca-py/          # Alpaca trading SDK  
-├── trading_env/        # Virtual environment
-└── context-engineering-intro/  # Context engineering templates
+├── fastquant/                      # Python backtesting library
+├── alpaca-py/                      # Alpaca trading SDK  
+│   └── examples/options/           # Python strategy notebooks to convert
+├── trading_env/                    # Virtual environment
+├── context-engineering-intro/      # Context engineering templates
+├── docs/                           # Documentation
+│   └── STRATEGY_CONVERSION_ANALYSIS.md  # Conversion guide
+└── ultra-trading/                  # Cloudflare Workers app
+    ├── src/
+    │   ├── strategies/             # TypeScript strategies
+    │   │   └── GammaScalpingStrategy.ts
+    │   └── utils/
+    │       └── options-pricing.ts  # Mathematical utilities
+    └── scripts/
+        └── convert-notebook.ts     # Jupyter to TypeScript converter
 ```
+
+## 🔄 Strategy Conversion Resources
+
+**Available Resources for Strategy Conversion:**
+1. **Converter Script**: `ultra-trading/scripts/convert-notebook.ts`
+   - Run: `ts-node scripts/convert-notebook.ts input.ipynb output.ts`
+   - Automatically converts Python patterns to TypeScript
+   
+2. **Example Implementation**: `ultra-trading/src/strategies/GammaScalpingStrategy.ts`
+   - Complete TypeScript strategy with all patterns
+   - Use as template for other strategies
+   
+3. **Mathematical Utilities**: `ultra-trading/src/utils/options-pricing.ts`
+   - Black-Scholes pricing engine
+   - Greeks calculations (Delta, Gamma, Theta, Vega, Rho)
+   - Normal distribution functions (replaces scipy.stats)
+   - Optimization algorithms (replaces scipy.optimize)
+   
+4. **Conversion Guide**: `docs/STRATEGY_CONVERSION_ANALYSIS.md`
+   - Detailed analysis of all strategies
+   - Technical challenges and solutions
+   - Implementation checklist
 
 ## 🧱 Code Structure & Standards
 
@@ -46,6 +86,7 @@ trading-backtesting/
 - **Use Hono framework** for Workers API
 - **Follow existing patterns** in alpaca-py examples
 - **Package structure**: Monorepo with packages/ directory
+- **Strategy Pattern**: All strategies extend `TradingStrategy` base class
 
 ## 🧪 Testing Requirements
 
@@ -54,6 +95,7 @@ trading-backtesting/
 - **Test coverage minimum**: 80%
 - **Test patterns**: Happy path, edge cases, error cases
 - **Run tests before marking any task complete**
+- **Validate mathematical functions** against Python outputs
 
 ## 🔧 Development Commands
 
@@ -64,6 +106,10 @@ source trading_env/bin/activate
 # Install dependencies
 pip install alpaca-py anthropic google-generativeai langchain chromadb
 cd fastquant && pip install -r python/requirements.txt
+
+# Convert notebooks to TypeScript
+cd ultra-trading
+ts-node scripts/convert-notebook.ts ../alpaca-py/examples/options/options-iron-condor.ipynb src/strategies/IronCondorStrategy.ts
 
 # Future Cloudflare commands
 npx wrangler dev --local --persist
@@ -82,9 +128,12 @@ export GOOGLE_API_KEY="..."
 ## ⚡ Key Integration Points
 
 - **Notebooks to Convert**: `alpaca-py/examples/options/*.ipynb`
-  - options-gamma-scalping.ipynb (Priority 1)
-  - options-iron-condor.ipynb
-  - options-wheel-strategy.ipynb
+  - ✅ options-gamma-scalping.ipynb (COMPLETED)
+  - 🚧 options-iron-condor.ipynb (Priority 2)
+  - 🚧 options-wheel-strategy.ipynb (Priority 3)
+  - 📋 options-bull-call-spread.ipynb
+  - 📋 options-bear-put-spread.ipynb
+  - 📋 options-calendar-spread.ipynb
 - **Fastquant Strategies**: `fastquant/python/fastquant/strategies/`
 - **Backtest Engine**: `fastquant/python/fastquant/backtest/backtest.py`
 
@@ -134,6 +183,16 @@ class ServiceName {
 }
 ```
 
+### Trading Strategy Pattern
+```typescript
+// All strategies must extend base class
+abstract class TradingStrategy {
+  abstract execute(marketData: MarketData): Promise<Signal[]>;
+  abstract validate(account: Account): Promise<ValidationResult>;
+  abstract calculateRisk(positions: Position[]): RiskMetrics;
+}
+```
+
 ## 📋 Base PRP Template v2 - MANDATORY METHODOLOGY
 
 **Purpose**: Template optimized for AI agents to implement features with sufficient context and self-validation capabilities to achieve working code through iterative refinement.
@@ -154,14 +213,14 @@ class ServiceName {
 ### Validation Loop (MANDATORY)
 ```bash
 # Level 1: Syntax & Style (fix FIRST)
-ruff check src/ --fix
-mypy src/
+npm run lint
+npm run type-check
 
 # Level 2: Unit Tests (use existing patterns)
-pytest test_feature.py -v
+npm test
 
 # Level 3: Integration Test
-curl -X POST http://localhost:8000/endpoint
+curl -X POST http://localhost:8787/api/v1/endpoint
 ```
 
 ### Anti-Patterns to Avoid ❌
@@ -174,9 +233,10 @@ curl -X POST http://localhost:8000/endpoint
 
 ## 🧠 AI Behavior Rules
 
-- **Never assume context** - read all three documentation files
+- **Never assume context** - read all documentation files
 - **ALWAYS follow PRP Template v2** - no exceptions
-- **Use TodoWrite** for task tracking
+- **Review strategy conversion docs** before implementing strategies
+- **Use existing mathematical utilities** - don't reimplement
 - **Validate all code** before marking tasks complete
 - **Check existing patterns** before creating new ones
 - **Run validation loops** after every change
@@ -189,12 +249,14 @@ curl -X POST http://localhost:8000/endpoint
 - "Implement strategy backtesting"
 - "Update documentation"
 - "Add performance optimizations"
+- "Convert trading strategies"
 
 ❌ Avoid (Too Specific):
 - "Add Cloudflare Workers API"
 - "Implement multi-tenant SaaS"
 - "Add ULTRA platform features"
 - "Setup Alpaca live trading"
+- "Convert Gamma Scalping for options"
 
 ## 🚀 Success Metrics
 
@@ -204,11 +266,13 @@ Track these in ProjectTasks.md:
 - Zero cold starts
 - 80% cost reduction vs traditional cloud
 - 90%+ test coverage
+- Strategy conversion accuracy: Greeks within 0.01%
 
 ## 📚 Required Reading Order
 
 1. This file (CLAUDE.md)
 2. ProjectContextEngineering.md - Technical deep dive
 3. ProjectTasks.md - Current tasks and progress
+4. docs/STRATEGY_CONVERSION_ANALYSIS.md - Conversion patterns
 
 Always maintain stealth mode in public-facing documentation.

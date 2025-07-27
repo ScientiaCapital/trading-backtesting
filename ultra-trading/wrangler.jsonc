@@ -1,4 +1,5 @@
 /**
+ * ULTRA Trading Platform - Cloudflare Workers Configuration
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
@@ -7,45 +8,93 @@
 	"name": "ultra-trading",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-07-26",
+	"compatibility_flags": ["nodejs_compat"],
+	
+	/**
+	 * Static Assets
+	 */
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public"
 	},
-	"observability": {
-		"enabled": true
-	}
-	/**
-	 * Smart Placement
-	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-	 */
-	// "placement": { "mode": "smart" },
-
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
 
 	/**
 	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Non-sensitive configuration values
 	 */
-	// "vars": { "MY_VARIABLE": "production_value" },
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
+	"vars": {
+		"ENVIRONMENT": "development",
+		"LOG_LEVEL": "debug",
+		"API_VERSION": "v1"
+	},
 
 	/**
-	 * Static Assets
-	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 * D1 Database Bindings
+	 * Serverless SQL database for storing user data, strategies, and trade records
 	 */
-	// "assets": { "directory": "./public/", "binding": "ASSETS" },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "ultra-trading",
+			"database_id": "placeholder-will-be-generated"
+		}
+	],
 
 	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 * KV Namespace Bindings
+	 * Key-value storage for caching market data, session tokens, and configurations
 	 */
-	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "placeholder-will-be-generated",
+			"preview_id": "placeholder-preview-id"
+		}
+	],
+
+	/**
+	 * R2 Object Storage Bindings
+	 * For storing backtest results, strategy files, and large datasets
+	 */
+	"r2_buckets": [
+		{
+			"binding": "DATA_BUCKET",
+			"bucket_name": "ultra-data"
+		}
+	],
+
+	/**
+	 * Workers AI Binding
+	 * For AI-powered analysis and strategy optimization
+	 */
+	"ai": {
+		"binding": "AI"
+	},
+
+	/**
+	 * Durable Objects
+	 * For real-time trading sessions and WebSocket connections
+	 */
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "TRADING_SESSION",
+				"class_name": "TradingSession"
+			}
+		]
+	},
+
+	/**
+	 * Observability & Monitoring
+	 */
+	"observability": {
+		"enabled": true
+	},
+
+	/**
+	 * Smart Placement for optimal global performance
+	 */
+	"placement": {
+		"mode": "smart"
+	}
 }

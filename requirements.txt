@@ -16,4 +16,17 @@ black>=23.0.0
 ruff>=0.1.0
 mypy>=1.0.0
 
+# Environment and API
+python-dotenv>=1.0.0
+google-generativeai>=0.3.0
+
+# Web framework (for future API/UI)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+streamlit>=1.28.0
+
+# Additional utilities
+httpx>=0.24.0
+websocket-client>=1.6.0
+
 # Additional dependencies will be added as needed

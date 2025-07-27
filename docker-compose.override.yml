@@ -1,0 +1,16 @@
+services:
+  trading-app:
+    # Development-specific overrides
+    build:
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    environment:
+      - PYTHONDEBUG=1
+      - FLASK_ENV=development
+      - DEBUG=True
+    # Mount additional development directories
+    volumes:
+      - ./tests:/app/tests:rw
+      - ./logs:/app/logs:rw
+    # Keep container running for development
+    command: tail -f /dev/null
