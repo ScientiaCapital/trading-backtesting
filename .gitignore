@@ -107,3 +107,8 @@ backtest_results/
 !data/.gitkeep
 !credentials/.gitkeep
 !backtest_results/.gitkeep
+
+# Embedded repositories (cloned for reference)
+alpaca-py/
+context-engineering-intro/
+fastquant/

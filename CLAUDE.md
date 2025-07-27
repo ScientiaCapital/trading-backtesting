@@ -2,7 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**IMPORTANT**: After reading this file, you MUST read ProjectContextEngineering.md and ProjectTasks.md in that order.
+**MANDATORY READING ORDER**: 
+1. **This file (CLAUDE.md)** - Core rules and current state
+2. **ProjectContextEngineering.md** - Technical architecture and decisions
+3. **ProjectTasks.md** - Current tasks and fast start plan
+
+**🚨 CRITICAL**: Always follow the Base PRP Template v2 methodology for ALL feature development.
 
 ## 🚀 Project: ULTRA Trading Platform
 
@@ -12,11 +17,16 @@ A next-generation trading platform combining fastquant (backtesting) with Alpaca
 
 - **Always read `ProjectContextEngineering.md`** for technical decisions and architecture
 - **Check `ProjectTasks.md`** before starting work - tasks are prioritized and tracked there
-- **Current State**: Two separate libraries (fastquant, alpaca-py) that need integration
+- **Current State**: 
+  - ✅ AI APIs fully configured (Anthropic Claude + Google Gemini)
+  - ✅ All API keys secured in .env and tested
+  - ✅ Python environment with all dependencies installed
+  - 🚧 Cloudflare Workers project initialization in progress
 - **Target State**: Unified platform on Cloudflare Workers with multi-tenant SaaS architecture
 - **GitHub Repository**: https://github.com/ScientiaCapital/trading-backtesting
 - **Organization**: ScientiaCapital
 - **Cloudflare Account**: Already available and ready to use
+- **AI Stack**: Anthropic Claude + Google Gemini (NO OpenAI) - WORKING ✅
 
 ## 📁 Current Repository Structure
 
@@ -52,17 +62,21 @@ trading-backtesting/
 source trading_env/bin/activate
 
 # Install dependencies
-pip install alpaca-py
+pip install alpaca-py anthropic google-generativeai langchain chromadb
 cd fastquant && pip install -r python/requirements.txt
 
 # Future Cloudflare commands
-npx wrangler dev --local
-npx wrangler d1 execute trading-db --local --command "SELECT * FROM users"
+npx wrangler dev --local --persist
+npx wrangler d1 execute ultra-trading --local --command "SELECT * FROM users"
 npx wrangler deploy --env production
 
 # Testing
 python -m pytest tests/ -v  # Python tests
 npm test                    # TypeScript tests
+
+# AI SDK Usage
+export ANTHROPIC_API_KEY="sk-ant-..."
+export GOOGLE_API_KEY="..."
 ```
 
 ## ⚡ Key Integration Points
@@ -92,8 +106,22 @@ class TradingAgent {
   tools = [
     BacktestAgent,     // Delegates to fastquant
     AlpacaAgent,       // Handles live trading
-    AnalysisAgent      // AI-powered insights
+    AnalysisAgent      // AI-powered insights using Claude/Gemini
   ]
+}
+```
+
+### AI Integration Pattern
+```typescript
+// Universal AI client supporting both providers
+class AIService {
+  async generateText(provider: 'anthropic' | 'gemini', prompt: string) {
+    // Anthropic Claude for complex analysis
+    // Google Gemini for quick responses
+  }
+  async embedText(text: string) {
+    // Cloudflare Workers AI for embeddings
+  }
 }
 ```
 
@@ -106,14 +134,52 @@ class ServiceName {
 }
 ```
 
+## 📋 Base PRP Template v2 - MANDATORY METHODOLOGY
+
+**Purpose**: Template optimized for AI agents to implement features with sufficient context and self-validation capabilities to achieve working code through iterative refinement.
+
+### Core Principles (ALWAYS FOLLOW)
+1. **Context is King**: Include ALL necessary documentation, examples, and caveats
+2. **Validation Loops**: Provide executable tests/lints the AI can run and fix
+3. **Information Dense**: Use keywords and patterns from the codebase
+4. **Progressive Success**: Start simple, validate, then enhance
+
+### Implementation Blueprint (Required for ALL Features)
+1. **Data models and structure** - Create core data models ensuring type safety
+2. **Task breakdown** - List tasks in completion order with pseudocode
+3. **Integration points** - Database, config, routes with specific patterns
+4. **Validation loop** - Syntax, unit tests, integration tests
+5. **Final validation checklist** - All tests pass, no errors, documentation updated
+
+### Validation Loop (MANDATORY)
+```bash
+# Level 1: Syntax & Style (fix FIRST)
+ruff check src/ --fix
+mypy src/
+
+# Level 2: Unit Tests (use existing patterns)
+pytest test_feature.py -v
+
+# Level 3: Integration Test
+curl -X POST http://localhost:8000/endpoint
+```
+
+### Anti-Patterns to Avoid ❌
+- Don't create new patterns when existing ones work
+- Don't skip validation because "it should work"
+- Don't ignore failing tests - fix them
+- Don't use sync functions in async context
+- Don't hardcode values that should be config
+- Don't catch all exceptions - be specific
+
 ## 🧠 AI Behavior Rules
 
 - **Never assume context** - read all three documentation files
-- **Follow PRP methodology** from context-engineering-intro
+- **ALWAYS follow PRP Template v2** - no exceptions
 - **Use TodoWrite** for task tracking
 - **Validate all code** before marking tasks complete
 - **Check existing patterns** before creating new ones
-- **Run linting and tests** after every change
+- **Run validation loops** after every change
 - **Keep commits generic** to maintain stealth mode
 
 ## 📝 Commit Message Guidelines
