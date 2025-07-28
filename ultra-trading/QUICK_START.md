@@ -125,12 +125,27 @@ curl -X POST http://localhost:8787/api/v1/trading/orders \
   }'
 ```
 
-## 🚦 Ready to Trade?
+## 🚦 Ready for AI-Powered Trading?
 
-1. ✅ API keys configured
-2. ✅ Dev server running
-3. ✅ Account endpoint responding
-4. ✅ Market data flowing
-5. 🎉 Start with small paper trades!
+1. ✅ Trading API keys configured
+2. ✅ AI API keys configured (optional)
+3. ✅ Dev server running
+4. ✅ Account endpoint responding
+5. ✅ AI agents initialized
+6. ✅ Market data flowing
+7. 🎉 Start automated trading!
 
-Remember: This is Paper Trading - perfect for testing strategies without risk!
+### 🤖 AI Trading Features:
+- **Automated Analysis**: AI agents analyze markets 24/7
+- **Smart Execution**: Optimal order routing and timing
+- **Risk Management**: AI-powered stop-loss and position sizing
+- **Daily Target**: Automatically stops at $300 profit
+- **Paper Trading**: Test strategies without risk!
+
+### 🚀 Next Steps:
+1. Monitor the AI dashboard at `/dashboard`
+2. Review daily performance reports
+3. Adjust strategy allocations as needed
+4. Scale up when confident
+
+Remember: Start with Paper Trading to test the AI system!

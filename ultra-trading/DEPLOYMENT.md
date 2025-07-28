@@ -1,6 +1,6 @@
-# 🚀 ULTRA Trading Platform - Cloudflare Workers Deployment Guide
+# 🚀 ULTRA Trading Platform - AI-Powered Workers Deployment Guide
 
-**⚠️ IMPORTANT: This is a Cloudflare Workers application, NOT a Pages application**
+**⚠️ IMPORTANT: This is a Cloudflare Workers application with AI agents, NOT a Pages application**
 
 ## Current Live Deployments
 
@@ -36,7 +36,7 @@ npm run deploy:production
 ### 2. Create Cloudflare Resources
 
 ```bash
-# Create all resources automatically
+# Create all resources automatically (includes AI bindings)
 npm run setup:cloudflare
 
 # OR create manually:
@@ -46,6 +46,9 @@ wrangler kv:namespace create "CACHE" --env staging
 wrangler kv:namespace create "CACHE" --env production
 wrangler r2 bucket create ultra-data-staging
 wrangler r2 bucket create ultra-data-production
+
+# Note: AI bindings are configured in wrangler.jsonc
+# Durable Objects for agent coordination are auto-created
 ```
 
 ### 3. Update Configuration
@@ -57,7 +60,7 @@ The setup script automatically updates `wrangler.jsonc` with actual resource IDs
 - `YOUR_STAGING_KV_NAMESPACE_ID`
 - `YOUR_PRODUCTION_KV_NAMESPACE_ID`
 
-### 4. Set Secrets
+### 4. Set Secrets (Including AI Keys)
 
 ```bash
 # Interactive setup for all secrets
@@ -67,6 +70,8 @@ npm run setup:secrets:production
 # OR set individual secrets:
 wrangler secret put ALPACA_API_KEY --env staging
 wrangler secret put ALPACA_API_SECRET --env staging
+wrangler secret put ANTHROPIC_API_KEY --env staging
+wrangler secret put GOOGLE_AI_API_KEY --env staging
 wrangler secret put JWT_SECRET --env staging
 wrangler secret put ENCRYPTION_KEY --env staging
 ```
@@ -94,6 +99,12 @@ wrangler tail --env staging
 # Test API endpoints
 curl https://ultra-trading-staging.your-subdomain.workers.dev/api/v1/health
 curl https://ultra-trading-staging.your-subdomain.workers.dev/api/v1/trading/market/status
+
+# Test AI agent endpoints
+curl https://ultra-trading-staging.your-subdomain.workers.dev/api/v1/ai/agents/status
+curl -X POST https://ultra-trading-staging.your-subdomain.workers.dev/api/v1/ai/agents/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"symbol": "AAPL", "type": "market_analysis"}'
 ```
 
 ### 8. Deploy to Production
@@ -118,11 +129,13 @@ wrangler tail --env production
 # Development
 npm run dev                    # Start local development server
 npm run market:prep           # Run pre-market preparation script
+npm run agents:test          # Test AI agents locally
 
 # Building & Testing
 npm run validate              # Run all tests and checks
 npm run type-check           # TypeScript type checking
 npm run lint                 # Code linting
+npm run test:agents          # Test AI agent integration
 
 # Deployment
 npm run deploy:staging       # Deploy to staging
@@ -240,12 +253,15 @@ wrangler deploy --env staging --no-minify
 Before deploying to production:
 
 - [ ] All tests passing: `npm run validate`
+- [ ] AI agent tests passing: `npm run test:agents`
 - [ ] Database schema applied
-- [ ] All required secrets set
+- [ ] All required secrets set (including AI API keys)
 - [ ] Custom domain configured (if using)
 - [ ] Monitoring and alerting set up
+- [ ] AI agent failover procedures tested
 - [ ] Backup and recovery procedures documented
 - [ ] Risk management rules configured
+- [ ] Daily profit target system tested ($300/day)
 - [ ] Emergency stop procedures tested
 - [ ] Team trained on production procedures
 
@@ -258,3 +274,31 @@ Before deploying to production:
 5. **DDoS Protection**: Enable advanced DDoS protection
 6. **Bot Management**: Set up bot detection and blocking
 7. **Analytics**: Configure detailed analytics and reporting
+8. **AI Model Monitoring**: Track AI agent performance metrics
+9. **Cost Optimization**: Monitor AI API usage and costs
+10. **Automated Trading**: Enable automated trading features
+
+## AI-Specific Deployment Notes
+
+### Cloudflare AI Bindings
+```javascript
+// AI models are bound automatically in wrangler.jsonc:
+ai = [
+  { binding = "AI" }
+]
+```
+
+### Durable Objects for Agent Coordination
+```javascript
+// Agent coordinator is bound automatically:
+[[durable_objects.bindings]]
+name = "AGENT_COORDINATOR"
+class_name = "AgentCoordinator"
+script_name = "agent-coordinator"
+```
+
+### Performance Considerations
+- AI agent responses are cached for 60 seconds
+- Durable Objects maintain agent state globally
+- WebSocket connections enable real-time agent communication
+- Cron triggers handle scheduled trading tasks

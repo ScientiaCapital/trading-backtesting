@@ -1,13 +1,31 @@
 # ULTRA Trading Platform
 
-🚀 **Next-generation trading platform built on Cloudflare Workers with AI-powered analysis**
+🚀 **AI-Powered Quant Hedge Fund Trading Desk built on Cloudflare Workers**
 
 ## 🌐 Live Deployments
 
 - **Production**: https://ultra-trading.tkipper.workers.dev
 - **Staging**: https://ultra-trading-staging.tkipper.workers.dev
 
-## ⚡ Features
+## 🤖 AI-Powered Trading
+
+ULTRA leverages a sophisticated multi-agent AI architecture to create an autonomous trading system:
+
+### AI Agents
+- **Market Analyst Agent** (Powered by Google Gemini 2.0) - Real-time market analysis and pattern recognition
+- **Strategy Optimizer Agent** (Powered by Claude 4 Opus) - Strategy optimization and risk assessment
+- **Execution Agent** - Smart order routing and position management
+- **Risk Manager Agent** - Portfolio risk monitoring and stop-loss enforcement
+- **Performance Analyst Agent** - Daily P&L tracking with automatic $300 target stops
+
+### Key Features
+- **Autonomous Trading** - AI agents collaborate to analyze, decide, and execute trades
+- **Real-time Collaboration** - Agents communicate via Cloudflare Durable Objects
+- **Daily Profit Target** - Automatically stops trading when $300 profit is reached
+- **Multi-Model Intelligence** - Combines Gemini's speed with Claude's reasoning
+- **Edge Computing** - Sub-millisecond decision making at Cloudflare's edge
+
+## ⚡ Core Features
 
 - **Real-time Trading** with Alpaca Markets Paper Trading
 - **AI-Powered Analysis** using Google Gemini and Anthropic Claude
@@ -15,15 +33,44 @@
 - **Global Edge Deployment** on Cloudflare's network
 - **Real-time Market Data** with WebSocket streaming
 - **Comprehensive Backtesting** with historical data
+- **Automated Trading Pipeline** with risk validation
+- **Live Monitoring Dashboard** with WebSocket updates
 
 ## 🏗️ Architecture
 
-- **Runtime**: Cloudflare Workers (Edge Computing)
+### Multi-Agent AI System
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ULTRA Trading Platform                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌────────┐│
+│  │  Market   │   │ Strategy  │   │Execution  │   │  Risk  ││
+│  │ Analyst   │◄─►│Optimizer  │◄─►│  Agent    │◄─►│Manager ││
+│  │ (Gemini)  │   │ (Claude)  │   │           │   │        ││
+│  └─────┬─────┘   └─────┬─────┘   └─────┬─────┘   └───┬────┘│
+│        │               │               │              │      │
+│  ┌─────▼───────────────▼───────────────▼──────────────▼────┐│
+│  │         Durable Objects (Agent Communication)            ││
+│  └──────────────────────────────────────────────────────────┘│
+│                                                               │
+│  ┌──────────────────────────────────────────────────────────┐│
+│  │              Cloudflare Workers Runtime                   ││
+│  └──────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Infrastructure Stack
+- **Runtime**: Cloudflare Workers (Global Edge Computing)
 - **Framework**: Hono.js with TypeScript
+- **State Management**: Cloudflare Durable Objects
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2 + KV
 - **Trading API**: Alpaca Markets Paper Trading
-- **AI Services**: Google Gemini, Anthropic Claude
+- **AI Models**: 
+  - Google Gemini 2.0 Flash (Market Analysis)
+  - Anthropic Claude 4 Opus (Strategy Optimization)
+- **Real-time**: WebSockets + Cron Triggers
 
 ## 🚀 Quick Start
 
@@ -81,6 +128,18 @@ wrangler deploy --env production --minify
 
 ## 📊 API Endpoints
 
+### AI Agents
+- `POST /api/v1/ai/agents/analyze` - Trigger market analysis
+- `GET /api/v1/ai/agents/status` - Get agent status
+- `POST /api/v1/ai/agents/configure` - Configure agent parameters
+- `WS /ws/ai/agents` - Real-time agent communication
+
+### Automated Trading
+- `POST /api/v1/auto/start` - Start automated trading
+- `POST /api/v1/auto/stop` - Stop automated trading
+- `GET /api/v1/auto/performance` - Daily performance metrics
+- `GET /api/v1/auto/profit` - Current profit/loss status
+
 ### Trading
 - `GET /api/v1/trading/account` - Account information
 - `POST /api/v1/trading/orders` - Submit orders
@@ -116,14 +175,28 @@ npm run test:alpaca
 
 ## 📈 Trading Strategies
 
-### Gamma Scalping
-Dynamic hedging strategy that profits from volatility changes in options positions.
+### AI-Enhanced Strategies
+All strategies are continuously optimized by our AI agents:
 
-### Iron Condor
-Options strategy that profits from low volatility by selling both call and put spreads.
+#### Gamma Scalping
+- **AI Enhancement**: Gemini analyzes real-time volatility patterns
+- **Optimization**: Claude adjusts hedge ratios dynamically
+- **Execution**: Automated rebalancing based on gamma exposure
 
-### Wheel Strategy
-Systematic options strategy combining cash-secured puts and covered calls.
+#### Iron Condor
+- **AI Enhancement**: Pattern recognition for range-bound markets
+- **Optimization**: Strike selection based on ML predictions
+- **Risk Management**: Automatic adjustment when breached
+
+#### Wheel Strategy
+- **AI Enhancement**: Optimal strike/expiry selection
+- **Optimization**: Premium maximization algorithms
+- **Automation**: Fully automated put/call assignments
+
+### Daily Profit Target
+- **Goal**: $300/day profit target
+- **Protection**: Automatic trading stop when target reached
+- **Risk Control**: Maximum daily loss limits enforced
 
 ## 🔧 Configuration
 
