@@ -4,11 +4,34 @@
 
 ULTRA Trading Platform implements a sophisticated multi-agent AI system designed to operate as an autonomous quant hedge fund trading desk. Each agent specializes in specific aspects of trading, collaborating through Cloudflare Durable Objects for real-time decision making.
 
+## AI Integration Strategy
+
+ULTRA uses a hybrid approach combining Cloudflare Workers AI with external AI APIs to leverage the best of both worlds:
+
+### Cloudflare Workers AI
+- **Low-latency inference**: Sub-10ms response times at the edge
+- **Cost-effective**: No per-request charges for basic models
+- **Used for**: Risk analysis, performance tracking, and real-time decision making
+
+### External AI APIs
+- **Advanced capabilities**: Access to state-of-the-art models
+- **Specialized reasoning**: Complex strategy optimization and market analysis
+- **Used for**: Market analysis (Google Gemini) and strategy optimization (Anthropic Claude)
+
+### API Key Management
+All external API keys are securely managed via Cloudflare Workers secrets:
+```bash
+wrangler secret put ANTHROPIC_API_KEY
+wrangler secret put GOOGLE_API_KEY
+wrangler secret put ALPACA_KEY_ID
+wrangler secret put ALPACA_SECRET_KEY
+```
+
 ## Agent Architecture
 
 ### Core Agents
 
-#### 1. Market Analyst Agent (Powered by Google Gemini 2.0 Flash)
+#### 1. Market Analyst Agent (Powered by Google Gemini API)
 **Purpose**: Real-time market analysis and pattern recognition
 
 **Responsibilities**:
@@ -22,9 +45,10 @@ ULTRA Trading Platform implements a sophisticated multi-agent AI system designed
 ```typescript
 // src/agents/MarketAnalystAgent.ts
 export class MarketAnalystAgent extends BaseAgent {
-  model = '@cf/google/gemini-2.0-flash';
+  model = 'gemini-pro'; // Using Google Gemini API directly
   
   async analyzeMarket(data: MarketData): Promise<MarketAnalysis> {
+    // Uses Google Gemini API for advanced market analysis
     // Real-time pattern recognition
     // Volatility analysis
     // Trend identification
@@ -32,7 +56,9 @@ export class MarketAnalystAgent extends BaseAgent {
 }
 ```
 
-#### 2. Strategy Optimizer Agent (Powered by Claude 4 Opus)
+**Note**: Currently uses Cloudflare Workers AI binding, but can be switched to Google Gemini API for enhanced capabilities.
+
+#### 2. Strategy Optimizer Agent (Powered by Anthropic Claude API)
 **Purpose**: Strategy optimization and parameter tuning
 
 **Responsibilities**:
@@ -46,18 +72,21 @@ export class MarketAnalystAgent extends BaseAgent {
 ```typescript
 // src/agents/StrategyOptimizerAgent.ts
 export class StrategyOptimizerAgent extends BaseAgent {
-  model = 'claude-4-opus';
+  model = 'claude-3-opus-20240229'; // Using Anthropic API directly
   
   async optimizeStrategy(
     strategy: TradingStrategy,
     marketConditions: MarketConditions
   ): Promise<OptimizedStrategy> {
-    // Parameter optimization
+    // Uses Anthropic Claude for advanced strategy optimization
+    // Parameter optimization with reasoning
     // Risk assessment
     // Performance projection
   }
 }
 ```
+
+**Note**: Uses Anthropic's Claude API for complex reasoning and optimization tasks.
 
 #### 3. Execution Agent
 **Purpose**: Smart order routing and position management
@@ -84,7 +113,7 @@ export class ExecutionAgent extends BaseAgent {
 }
 ```
 
-#### 4. Risk Manager Agent
+#### 4. Risk Manager Agent (Powered by Cloudflare Workers AI)
 **Purpose**: Portfolio risk monitoring and control
 
 **Responsibilities**:
@@ -98,10 +127,13 @@ export class ExecutionAgent extends BaseAgent {
 ```typescript
 // src/agents/RiskManagerAgent.ts
 export class RiskManagerAgent extends BaseAgent {
+  model = '@cf/meta/llama-3.1-8b-instruct'; // Using Cloudflare Workers AI
+  
   async assessRisk(
     portfolio: Portfolio,
     proposedTrade: Trade
   ): Promise<RiskAssessment> {
+    // Uses Llama 3.1 for fast risk assessment
     // Risk metrics calculation
     // Limit checking
     // Approval/rejection logic
@@ -109,7 +141,9 @@ export class RiskManagerAgent extends BaseAgent {
 }
 ```
 
-#### 5. Performance Analyst Agent
+**Note**: Uses Cloudflare Workers AI for low-latency risk calculations at the edge.
+
+#### 5. Performance Analyst Agent (Powered by Cloudflare Workers AI)
 **Purpose**: P&L tracking and daily target management
 
 **Responsibilities**:
@@ -121,17 +155,21 @@ export class RiskManagerAgent extends BaseAgent {
 
 **Implementation**:
 ```typescript
-// src/agents/PerformanceAgent.ts
-export class PerformanceAgent extends BaseAgent {
+// src/agents/PerformanceAnalystAgent.ts
+export class PerformanceAnalystAgent extends BaseAgent {
+  model = '@cf/meta/llama-3.1-8b-instruct'; // Using Cloudflare Workers AI
   private dailyTarget = 300; // USD
   
   async checkDailyPerformance(): Promise<PerformanceStatus> {
+    // Uses Llama 3.1 for performance insights
     // Calculate daily P&L
     // Check against target
     // Trigger stop if target reached
   }
 }
 ```
+
+**Note**: Uses Cloudflare Workers AI for real-time performance tracking with minimal latency.
 
 ## Agent Communication System
 
@@ -223,23 +261,37 @@ graph LR
 
 ## AI Model Configuration
 
-### Gemini 2.0 Flash Configuration
+### Google Gemini API Configuration
 ```typescript
 const geminiConfig = {
-  model: '@cf/google/gemini-2.0-flash',
+  model: 'gemini-pro',
   temperature: 0.3, // Lower for consistent analysis
   maxTokens: 4096,
+  apiKey: env.GOOGLE_API_KEY,
   systemPrompt: `You are a professional market analyst AI...`
 };
 ```
 
-### Claude 4 Opus Configuration
+### Anthropic Claude API Configuration
 ```typescript
 const claudeConfig = {
-  model: 'claude-4-opus',
+  model: 'claude-3-opus-20240229',
   temperature: 0.2, // Very low for strategy optimization
   maxTokens: 8192,
+  apiKey: env.ANTHROPIC_API_KEY,
   systemPrompt: `You are a quantitative strategy optimizer...`
+};
+```
+
+### Cloudflare Workers AI Configuration
+```typescript
+const workersAIConfig = {
+  models: {
+    riskAnalysis: '@cf/meta/llama-3.1-8b-instruct',
+    performance: '@cf/meta/llama-3.1-8b-instruct',
+    embeddings: '@cf/baai/bge-base-en-v1.5'
+  },
+  binding: env.AI // Cloudflare AI binding
 };
 ```
 
@@ -314,10 +366,10 @@ const decisionCache = {
 ### ✅ Completed
 - Base Agent Architecture (`BaseAgent.ts`, `AIAgent.ts`)
 - Agent Type System (`types/agents.ts`)
-- Market Analyst Agent (Gemini-powered)
-- Strategy Optimizer Agent (Claude-powered)
-- Risk Manager Agent (Llama-powered)
-- Performance Analyst Agent (Llama-powered)
+- Market Analyst Agent (Google Gemini API / Cloudflare AI)
+- Strategy Optimizer Agent (Anthropic Claude API)
+- Risk Manager Agent (Cloudflare Workers AI - Llama 3.1)
+- Performance Analyst Agent (Cloudflare Workers AI - Llama 3.1)
 - Execution Agent (Smart order routing)
 - Agent Coordinator (Durable Objects)
 

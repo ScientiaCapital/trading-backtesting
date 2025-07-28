@@ -103,6 +103,18 @@
 	},
 
 	/**
+	 * Cron Triggers for Automated Trading
+	 */
+	"triggers": {
+		"crons": [
+			"30 9 * * 1-5",     // Market open check (9:30 AM ET weekdays)
+			"0 10-15 * * 1-5",  // Hourly during market hours (10 AM - 3 PM ET)
+			"30 15 * * 1-5",    // Pre-close check (3:30 PM ET)
+			"0 16 * * 1-5"      // Market close & daily summary (4:00 PM ET)
+		]
+	},
+
+	/**
 	 * Smart Placement for optimal global performance
 	 */
 	"placement": {

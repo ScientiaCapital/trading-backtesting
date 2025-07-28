@@ -266,5 +266,23 @@ export default {
     // All other requests go to Hono
     // Type assertion needed for Hono compatibility
     return app.fetch(request, env, ctx) as unknown as Response;
+  },
+  
+  /**
+   * Scheduled handler for cron triggers
+   */
+  async scheduled(event: ScheduledEvent, env: ApiContext['Bindings'], ctx: ExecutionContext): Promise<void> {
+    // Import dynamically to avoid circular dependencies
+    const { handleScheduled } = await import('./handlers/cron');
+    
+    // Handle the scheduled event
+    await handleScheduled(
+      {
+        cron: event.cron,
+        scheduledTime: event.scheduledTime
+      },
+      env,
+      ctx
+    );
   }
 } satisfies ExportedHandler<ApiContext['Bindings']>;

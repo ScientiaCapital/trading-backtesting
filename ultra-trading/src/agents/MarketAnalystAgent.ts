@@ -35,11 +35,15 @@ interface GeminiAnalysisResponse {
 
 export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
   private env?: CloudflareBindings;
+  private useGeminiAPI: boolean;
   
   constructor(config: AgentConfig, env?: CloudflareBindings) {
+    // Determine if we should use Google Gemini API or Cloudflare Workers AI
+    const useGeminiAPI = !!env?.GOOGLE_API_KEY;
+    
     super(AgentType.MARKET_ANALYST, {
       ...config,
-      model: '@cf/google/gemini-2.0-flash',
+      model: useGeminiAPI ? 'gemini-pro' : '@cf/meta/llama-3.1-8b-instruct',
       temperature: 0.3, // Lower temperature for consistent analysis
       maxTokens: 4096,
       systemPrompt: `You are a professional market analyst AI specializing in technical analysis and market pattern recognition. 
@@ -47,6 +51,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
         Focus on actionable insights for algorithmic trading systems.`
     });
     this.env = env;
+    this.useGeminiAPI = useGeminiAPI;
   }
 
   protected async onInitialize(): Promise<void> {
@@ -92,8 +97,38 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
     try {
       let response: GeminiAnalysisResponse;
       
-      if (this.env?.AI) {
-        // Use Cloudflare AI binding
+      if (this.useGeminiAPI && this.env?.GOOGLE_API_KEY) {
+        // Use Google Gemini API
+        const apiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': this.env.GOOGLE_API_KEY
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }],
+            generationConfig: {
+              temperature: this.config.temperature,
+              maxOutputTokens: this.config.maxTokens,
+              candidateCount: 1
+            }
+          })
+        });
+
+        if (!apiResponse.ok) {
+          throw new Error(`Gemini API error: ${apiResponse.status}`);
+        }
+
+        const data = await apiResponse.json() as any;
+        const responseText = data.candidates[0].content.parts[0].text;
+        response = JSON.parse(responseText) as GeminiAnalysisResponse;
+        
+      } else if (this.env?.AI) {
+        // Use Cloudflare Workers AI
         const result = await this.env.AI.run(
           this.config.model as string,
           {

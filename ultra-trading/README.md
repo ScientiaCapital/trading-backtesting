@@ -12,17 +12,17 @@
 ULTRA leverages a sophisticated multi-agent AI architecture to create an autonomous trading system:
 
 ### AI Agents
-- **Market Analyst Agent** (Powered by Google Gemini 2.0) - Real-time market analysis and pattern recognition
-- **Strategy Optimizer Agent** (Powered by Claude 4 Opus) - Strategy optimization and risk assessment
+- **Market Analyst Agent** (Powered by Google Gemini API / Cloudflare AI) - Real-time market analysis and pattern recognition
+- **Strategy Optimizer Agent** (Powered by Anthropic Claude API) - Strategy optimization and risk assessment
 - **Execution Agent** - Smart order routing and position management
-- **Risk Manager Agent** - Portfolio risk monitoring and stop-loss enforcement
-- **Performance Analyst Agent** - Daily P&L tracking with automatic $300 target stops
+- **Risk Manager Agent** (Powered by Cloudflare Workers AI) - Portfolio risk monitoring and stop-loss enforcement
+- **Performance Analyst Agent** (Powered by Cloudflare Workers AI) - Daily P&L tracking with automatic $300 target stops
 
 ### Key Features
 - **Autonomous Trading** - AI agents collaborate to analyze, decide, and execute trades
 - **Real-time Collaboration** - Agents communicate via Cloudflare Durable Objects
 - **Daily Profit Target** - Automatically stops trading when $300 profit is reached
-- **Multi-Model Intelligence** - Combines Gemini's speed with Claude's reasoning
+- **Hybrid AI Approach** - Combines Cloudflare Workers AI with external APIs (Gemini, Claude)
 - **Edge Computing** - Sub-millisecond decision making at Cloudflare's edge
 
 ## ⚡ Core Features
@@ -40,24 +40,30 @@ ULTRA leverages a sophisticated multi-agent AI architecture to create an autonom
 
 ### Multi-Agent AI System
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ULTRA Trading Platform                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌────────┐│
-│  │  Market   │   │ Strategy  │   │Execution  │   │  Risk  ││
-│  │ Analyst   │◄─►│Optimizer  │◄─►│  Agent    │◄─►│Manager ││
-│  │ (Gemini)  │   │ (Claude)  │   │           │   │        ││
-│  └─────┬─────┘   └─────┬─────┘   └─────┬─────┘   └───┬────┘│
-│        │               │               │              │      │
-│  ┌─────▼───────────────▼───────────────▼──────────────▼────┐│
-│  │         Durable Objects (Agent Communication)            ││
-│  └──────────────────────────────────────────────────────────┘│
-│                                                               │
-│  ┌──────────────────────────────────────────────────────────┐│
-│  │              Cloudflare Workers Runtime                   ││
-│  └──────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       ULTRA Trading Platform                          │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  ┌───────────────┐   ┌──────────────┐   ┌────────────┐   ┌─────────┐│
+│  │    Market     │   │   Strategy   │   │ Execution  │   │  Risk   ││
+│  │   Analyst     │◄─►│  Optimizer   │◄─►│   Agent    │◄─►│ Manager ││
+│  │(Gemini/CF AI) │   │(Claude API)  │   │            │   │ (CF AI) ││
+│  └──────┬────────┘   └──────┬───────┘   └─────┬──────┘   └────┬────┘│
+│         │                   │                  │               │      │
+│    ┌────▼─────┐       ┌─────▼────────────────▼────────────────▼────┐│
+│    │Performance│       │   Durable Objects (Agent Coordinator)      ││
+│    │ Analyst   │◄─────►│         Real-time Communication            ││
+│    │  (CF AI)  │       └────────────────────────────────────────────┘│
+│    └───────────┘                                                     │
+│                                                                       │
+│  ┌──────────────────────────────────────────────────────────────────┐│
+│  │                 Cloudflare Workers Runtime (Edge)                 ││
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ ││
+│  │  │ Workers AI │  │     D1     │  │     KV     │  │     R2     │ ││
+│  │  │  Binding   │  │  Database  │  │   Cache    │  │  Storage   │ ││
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────┘ ││
+│  └──────────────────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Infrastructure Stack
@@ -67,9 +73,10 @@ ULTRA leverages a sophisticated multi-agent AI architecture to create an autonom
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2 + KV
 - **Trading API**: Alpaca Markets Paper Trading
-- **AI Models**: 
-  - Google Gemini 2.0 Flash (Market Analysis)
-  - Anthropic Claude 4 Opus (Strategy Optimization)
+- **AI Integration**: 
+  - Cloudflare Workers AI (Risk & Performance Analysis)
+  - Google Gemini API (Market Analysis)
+  - Anthropic Claude API (Strategy Optimization)
 - **Real-time**: WebSockets + Cron Triggers
 
 ## 🚀 Quick Start
@@ -116,11 +123,21 @@ wrangler deploy --env production --minify
 
 ### Environment Setup
 
-1. **Configure Alpaca Credentials**:
+1. **Configure API Keys**:
    ```bash
-   # Copy your Alpaca Paper Trading credentials to .dev.vars
-   ALPACA_API_KEY=your_key_here
-   ALPACA_API_SECRET=your_secret_here
+   # Set up AI API keys
+   wrangler secret put GOOGLE_API_KEY
+   wrangler secret put ANTHROPIC_API_KEY
+   
+   # Set up Alpaca Paper Trading credentials
+   wrangler secret put ALPACA_KEY_ID
+   wrangler secret put ALPACA_SECRET_KEY
+   
+   # For local development, add to .dev.vars
+   GOOGLE_API_KEY=your_gemini_key_here
+   ANTHROPIC_API_KEY=your_claude_key_here
+   ALPACA_KEY_ID=your_alpaca_key_here
+   ALPACA_SECRET_KEY=your_alpaca_secret_here
    ```
 
 2. **Set up Cloudflare Resources**:
@@ -231,6 +248,8 @@ All configuration is in `wrangler.jsonc`:
 
 ## 📚 Documentation
 
+- [AI Models Guide](./CLAUDE.md) - Complete guide to AI integration
+- [AI Agents Architecture](./AI_AGENTS.md) - Multi-agent system design
 - [Deployment Guide](./DEPLOYMENT.md)
 - [Quick Start Guide](./QUICK_START.md)
 - [API Documentation](https://ultra-trading.tkipper.workers.dev/docs)

@@ -32,6 +32,7 @@ export interface CloudflareBindings {
   
   // Durable Objects
   TRADING_SESSION: DurableObjectNamespace;
+  AGENT_COORDINATOR: DurableObjectNamespace;
   
   // Static Assets
   ASSETS: Fetcher;
@@ -43,9 +44,9 @@ export interface CloudflareBindings {
   
   // Secrets (injected via wrangler secret)
   ANTHROPIC_API_KEY?: string;
-  GOOGLE_AI_API_KEY?: string;
-  ALPACA_API_KEY?: string;
-  ALPACA_API_SECRET?: string;
+  GOOGLE_API_KEY?: string;
+  ALPACA_KEY_ID?: string;
+  ALPACA_SECRET_KEY?: string;
 }
 
 /**
