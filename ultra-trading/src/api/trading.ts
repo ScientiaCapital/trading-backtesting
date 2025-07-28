@@ -48,7 +48,7 @@ tradingRoutes.get('/dashboard-status', async (c) => {
     const positions = await alpaca.getPositions();
     
     // Calculate daily P&L
-    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(pos.unrealizedPL || '0'), 0);
+    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(String(pos.unrealizedPL || 0)), 0);
     
     const dashboardData = {
       clock: {
@@ -65,7 +65,7 @@ tradingRoutes.get('/dashboard-status', async (c) => {
       positions: {
         count: positions.length,
         dailyPnL: dailyPnL,
-        totalValue: positions.reduce((sum, pos) => sum + parseFloat(pos.marketValue || '0'), 0)
+        totalValue: positions.reduce((sum, pos) => sum + parseFloat(String(pos.marketValue || 0)), 0)
       },
       trading: {
         enabled: true, // Default enabled for now
