@@ -379,14 +379,16 @@ export class AlpacaService {
   private formatDate(date?: Date | number): string {
     if (!date) return '';
     
+    let dateObj: Date;
     if (typeof date === 'number') {
       // Days from now
-      const d = new Date();
-      d.setDate(d.getDate() + date);
-      date = d;
+      dateObj = new Date();
+      dateObj.setDate(dateObj.getDate() + date);
+    } else {
+      dateObj = date;
     }
     
-    return date.toISOString().split('T')[0];
+    return dateObj.toISOString().split('T')[0];
   }
 }
 
@@ -396,7 +398,7 @@ export class AlpacaService {
 export class AlpacaAPIError extends Error {
   constructor(
     public status: number,
-    public message: string
+    message: string
   ) {
     super(`Alpaca API Error (${status}): ${message}`);
     this.name = 'AlpacaAPIError';

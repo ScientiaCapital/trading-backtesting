@@ -5,101 +5,44 @@
  * stock positions against options positions as the underlying price moves.
  */
 
-import type { TradingStrategy, MarketData, TradingOrder, BacktestResult } from '../types';
-import type { Account } from '../types/trading';
-import { AssetClass } from '../types/trading';
-import type { OptionContract } from '../types/options';
-import { AlpacaTradingService as _AlpacaTradingService } from '../services/alpaca/AlpacaTradingService';
-import { AlpacaMarketData as _AlpacaMarketData } from '../services/alpaca/AlpacaMarketData';
-import { BlackScholesEngine } from '../utils/options-pricing';
-
-// Define missing types for now
-interface Signal {
-  symbol: string;
-  action: 'buy' | 'sell' | 'hold';
-  quantity: number;
-  confidence: number;
-}
-
-interface ValidationResult {
-  isValid: boolean;
-  errors?: string[];
-}
-
-
-interface Position {
-  symbol: string;
-  quantity: number;
-  marketValue: number;
-  costBasis: number;
-  unrealizedPnl: number;
-}
-
-interface Order {
-  symbol: string;
-  side: OrderSide;
-  quantity: number;
-  type: OrderType;
-  limitPrice?: number;
-}
-
-type OrderSide = 'buy' | 'sell';
-type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit';
-type AssetClass = 'us_equity' | 'us_option';
-
-interface OptionContract {
-  symbol: string;
-  strike: number;
-  expiration: Date;
-  right: 'call' | 'put';
-}
-
-interface OptionQuote {
-  bid: number;
-  ask: number;
-  last: number;
-  bidSize: number;
-  askSize: number;
-}
-
-interface Greeks {
-  delta: number;
-  gamma: number;
-  theta: number;
-  vega: number;
-  rho: number;
-}
-
-// Placeholder for implied volatility calculation
-const calculateImpliedVolatility = (_price: number, _params: any): number => 
-  // Simplified IV calculation
-   0.25
-;
+import { TradingStrategy, Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
+import { Order, OrderType, TimeInForce } from '@/types/trading';
+import { OptionContract, OptionQuote } from '@/types/options';
+import { AlpacaService } from '@/services/alpaca/trading-client';
+import { MarketDataService } from '@/services/market-data';
+import { BlackScholesEngine } from '@/utils/options-pricing';
 
 export interface GammaScalpingConfig {
+  deltaHedgeThreshold: number;  // e.g., 0.05 for 5 delta
+  gammaThreshold: number;       // Minimum gamma to consider position
+  hedgeInterval: number;        // Minutes between hedge checks
+  maxPositionSize: number;      // Maximum option contracts
+  stopLossPercent: number;      // Stop loss percentage
+  takeProfitPercent: number;    // Take profit percentage
   underlyingSymbol: string;
-  maxAbsNotionalDelta: number;
   riskFreeRate: number;
-  minExpiration: number; // days
-  maxExpiration: number; // days
-  minStrike?: number; // percentage above current price
-  maxContracts?: number; // max option contracts to hold
-  rebalanceThreshold?: number; // delta threshold for rebalancing
 }
 
-export interface PositionState {
-  [symbol: string]: {
-    assetClass: AssetClass;
-    underlyingSymbol?: string;
-    expirationDate?: Date;
-    strikePrice?: number;
-    optionType?: 'call' | 'put';
-    contractSize?: number;
-    position: number;
-    initialPosition: number;
-    lastPrice?: number;
-    greeks?: Greeks;
+interface GammaPosition {
+  symbol: string;
+  optionSymbol: string;
+  quantity: number;
+  delta: number;
+  gamma: number;
+  entryPrice: number;
+  strikePrice: number;
+  expirationDate: string;
+}
+
+interface OptionWithGreeks extends OptionContract {
+  greeks?: {
+    delta: number;
+    gamma: number;
+    theta: number;
+    vega: number;
+    iv: number;
   };
+  quote?: OptionQuote;
 }
 
 /**
@@ -107,16 +50,17 @@ export interface PositionState {
  * 
  * Key features:
  * - Maintains delta-neutral portfolio
- * - Profits from gamma (convexity) of options
- * - Automatically rebalances as underlying moves
+ * - Profits from gamma (realized volatility)
+ * - Requires active management and rebalancing
  */
 export class GammaScalpingStrategy extends TradingStrategy {
-  private readonly config: GammaScalpingConfig;
+  name = 'Gamma Scalping';
+  
   private readonly alpaca: AlpacaService;
   private readonly marketData: MarketDataService;
   private readonly bsEngine: BlackScholesEngine;
-  private positions: PositionState = {};
-  private isInitialized = false;
+  private positions: Map<string, GammaPosition> = new Map();
+  private config: GammaScalpingConfig;
 
   constructor(
     config: GammaScalpingConfig,
@@ -124,12 +68,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
     marketData: MarketDataService
   ) {
     super();
-    this.config = {
-      minStrike: 1.01, // 1% above current price
-      maxContracts: 3,
-      rebalanceThreshold: 0.1,
-      ...config
-    };
+    this.config = config;
     this.alpaca = alpaca;
     this.marketData = marketData;
     this.bsEngine = new BlackScholesEngine(config.riskFreeRate);
@@ -140,38 +79,33 @@ export class GammaScalpingStrategy extends TradingStrategy {
    */
   async execute(marketData: MarketData): Promise<Signal[]> {
     const signals: Signal[] = [];
-
+    
     try {
-      // Initialize positions if not done
-      if (!this.isInitialized) {
-        await this.initializePositions();
-        this.isInitialized = true;
-      }
-
-      // Update current prices and calculate Greeks
-      await this.updatePositionGreeks();
-
-      // Calculate portfolio delta
-      const portfolioDelta = this.calculatePortfolioDelta();
-      console.log(`Portfolio Delta: ${portfolioDelta.toFixed(2)}`);
-
-      // Check if rebalancing is needed
-      const deltaNotional = Math.abs(portfolioDelta * marketData.price);
-      if (deltaNotional > this.config.maxAbsNotionalDelta) {
-        const rebalanceSignal = this.generateRebalanceSignal(portfolioDelta, marketData.price);
-        if (rebalanceSignal) {
-          signals.push(rebalanceSignal);
+      // Get current gamma exposure
+      const gammaExposure = await this.calculateGammaExposure();
+      
+      if (Math.abs(gammaExposure) > this.config.gammaThreshold) {
+        // Need to hedge
+        const hedgeSignal = await this.generateHedgeSignal(marketData, gammaExposure);
+        if (hedgeSignal) {
+          signals.push(hedgeSignal);
         }
       }
-
-      // Monitor option positions for adjustments
-      const adjustmentSignals = await this.checkOptionAdjustments();
-      signals.push(...adjustmentSignals);
-
+      
+      // Check for new opportunities
+      const entrySignal = await this.scanForEntry(marketData);
+      if (entrySignal) {
+        signals.push(entrySignal);
+      }
+      
+      // Check exit conditions
+      const exitSignals = await this.checkExitConditions(marketData);
+      signals.push(...exitSignals);
+      
       return signals;
     } catch (error) {
-      console.error('Error executing Gamma Scalping strategy:', error);
-      throw error;
+      console.error('Error in gamma scalping strategy:', error);
+      return [];
     }
   }
 
@@ -182,15 +116,14 @@ export class GammaScalpingStrategy extends TradingStrategy {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Check account permissions
+    // Check if account has options trading enabled
     if (!account.optionsApproved) {
-      errors.push('Options trading not approved for this account');
+      errors.push('Options trading must be enabled for gamma scalping');
     }
 
-    // Check buying power
-    const requiredBuyingPower = this.estimateRequiredCapital();
-    if (account.buyingPower < requiredBuyingPower) {
-      errors.push(`Insufficient buying power. Required: $${requiredBuyingPower.toFixed(2)}`);
+    // Check if account has sufficient buying power
+    if (account.buyingPower < 10000) {
+      errors.push('Insufficient buying power. Minimum $10,000 required');
     }
 
     // Check if market is open
@@ -198,11 +131,11 @@ export class GammaScalpingStrategy extends TradingStrategy {
       warnings.push('Market is currently closed');
     }
 
-    // Validate underlying symbol
+    // Check if we have market data access
     try {
-      await this.marketData.validateSymbol(this.config.underlyingSymbol);
+      await this.marketData.getQuote(this.config.underlyingSymbol);
     } catch (error) {
-      errors.push(`Invalid underlying symbol: ${this.config.underlyingSymbol}`);
+      errors.push('Unable to access market data for underlying symbol');
     }
 
     return {
@@ -213,230 +146,151 @@ export class GammaScalpingStrategy extends TradingStrategy {
   }
 
   /**
-   * Initialize option positions
+   * Calculate total gamma exposure across all positions
    */
-  private async initializePositions(): Promise<void> {
-    console.log(`Initializing positions for ${this.config.underlyingSymbol}`);
-
-    // Clear existing positions related to this underlying
-    await this.liquidateExistingPositions();
-
-    // Add underlying to positions
-    this.positions[this.config.underlyingSymbol] = {
-      assetClass: AssetClass.US_EQUITY,
-      position: 0,
-      initialPosition: 0
-    };
-
-    // Get current underlying price
-    const underlyingPrice = await this.marketData.getStockPrice(this.config.underlyingSymbol);
-    const minStrike = underlyingPrice * (this.config.minStrike || 1.01);
-
-    // Search for suitable option contracts
-    const optionChain = await this.alpaca.getOptionContracts({
-      underlyingSymbol: this.config.underlyingSymbol,
-      minExpiration: this.config.minExpiration,
-      maxExpiration: this.config.maxExpiration,
-      optionType: 'call',
-      minStrike,
-      limit: 10
-    });
-
-    // Select top contracts based on liquidity and Greeks
-    const selectedContracts = this.selectBestContracts(optionChain, underlyingPrice);
-
-    // Add selected contracts to positions
-    for (const contract of selectedContracts) {
-      this.positions[contract.symbol] = {
-        assetClass: AssetClass.US_OPTION,
-        underlyingSymbol: contract.underlyingSymbol,
-        expirationDate: new Date(contract.expirationDate),
-        strikePrice: contract.strikePrice,
-        optionType: contract.type,
-        contractSize: contract.contractSize,
-        position: 0,
-        initialPosition: 1 // Start with 1 contract each
-      };
-    }
-
-    // Execute initial trades
-    await this.executeInitialTrades();
-  }
-
-  /**
-   * Select best option contracts based on criteria
-   */
-  private selectBestContracts(
-    contracts: OptionContract[],
-    underlyingPrice: number
-  ): OptionContract[] {
-    // Filter and sort contracts
-    const suitable = contracts
-      .filter(contract => {
-        const moneyness = (contract as any).strikePrice / underlyingPrice;
-        return moneyness >= 1.01 && moneyness <= 1.10; // 1-10% OTM
-      })
-      .sort((a, b) => {
-        // Prefer contracts with better liquidity (volume/OI)
-        const liquidityA = ((a as any).volume || 0) + ((a as any).openInterest || 0);
-        const liquidityB = ((b as any).volume || 0) + ((b as any).openInterest || 0);
-        return liquidityB - liquidityA;
-      });
-
-    // Return top N contracts
-    return suitable.slice(0, this.config.maxContracts || 3);
-  }
-
-  /**
-   * Update Greeks for all option positions
-   */
-  private async updatePositionGreeks(): Promise<void> {
-    const underlyingPrice = await this.marketData.getStockPrice(this.config.underlyingSymbol);
-
-    for (const [_symbol, position] of Object.entries(this.positions)) {
-      if (position.assetClass === AssetClass.US_OPTION && position.position !== 0) {
-        // Get option quote
-        const quote = await this.marketData.getOptionQuote(symbol);
-        const midPrice = (quote.bidPrice + quote.askPrice) / 2;
-        
-        // Calculate time to expiration
-        const now = new Date();
-        const expiry = position.expirationDate!;
-        const daysToExpiry = Math.max(1, (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        const timeToExpiry = daysToExpiry / 365;
-
-        // Calculate implied volatility
-        const iv = calculateImpliedVolatility({
-          optionPrice: midPrice,
-          underlyingPrice,
-          strikePrice: position.strikePrice!,
-          timeToExpiry,
-          riskFreeRate: this.config.riskFreeRate,
-          optionType: position.optionType!
-        });
-
-        // Calculate Greeks
-        position.greeks = this.bsEngine.calculateGreeks({
-          underlyingPrice,
-          strikePrice: position.strikePrice!,
-          timeToExpiry,
-          volatility: iv,
-          optionType: position.optionType!
-        });
-
-        position.lastPrice = midPrice;
+  private async calculateGammaExposure(): Promise<number> {
+    let totalGamma = 0;
+    
+    for (const position of this.positions.values()) {
+      const currentOption = await this.marketData.getOptionQuote(position.optionSymbol);
+      if (currentOption && currentOption.greeks) {
+        totalGamma += position.quantity * currentOption.greeks.gamma * 100; // Contract multiplier
       }
     }
+    
+    return totalGamma;
   }
 
   /**
-   * Calculate total portfolio delta
+   * Generate hedge signal based on gamma exposure
    */
-  private calculatePortfolioDelta(): number {
-    let totalDelta = 0;
-
-    for (const [_symbol, position] of Object.entries(this.positions)) {
-      if (position.assetClass === AssetClass.US_EQUITY) {
-        // Stock has delta of 1
-        totalDelta += position.position;
-      } else if (position.assetClass === AssetClass.US_OPTION && position.greeks) {
-        // Option delta scaled by position and contract size
-        totalDelta += position.greeks.delta * position.position * (position.contractSize || 100);
-      }
+  private async generateHedgeSignal(
+    marketData: MarketData, 
+    gammaExposure: number
+  ): Promise<Signal | null> {
+    // Calculate shares needed to hedge
+    const sharesToHedge = Math.round(-gammaExposure * marketData.price);
+    
+    if (Math.abs(sharesToHedge) < 1) {
+      return null;
     }
-
-    return totalDelta;
-  }
-
-  /**
-   * Generate rebalancing signal to maintain delta neutrality
-   */
-  private generateRebalanceSignal(currentDelta: number, underlyingPrice: number): Signal | null {
-    const targetDelta = 0; // Delta neutral
-    const deltaToAdjust = targetDelta - currentDelta;
-
-    if (Math.abs(deltaToAdjust) < this.config.rebalanceThreshold) {
-      return null; // No adjustment needed
-    }
-
-    // Determine side and quantity
-    const side: OrderSide = deltaToAdjust > 0 ? 'buy' : 'sell';
-    const quantity = Math.round(Math.abs(deltaToAdjust));
 
     return {
-      action: 'rebalance',
-      symbol: this.config.underlyingSymbol,
-      side,
-      quantity,
+      action: sharesToHedge > 0 ? 'buy' : 'sell',
+      symbol: marketData.symbol,
+      side: sharesToHedge > 0 ? 'buy' : 'sell',
+      quantity: Math.abs(sharesToHedge),
       orderType: 'market' as OrderType,
-      timeInForce: 'day',
-      reason: `Delta rebalance: current=${currentDelta.toFixed(2)}, adjustment=${deltaToAdjust.toFixed(2)}`,
-      confidence: 0.95,
-      expectedReturn: 0, // Gamma scalping profits from volatility, not directional moves
-      risk: {
-        maxLoss: quantity * underlyingPrice * 0.02, // 2% adverse move
-        probability: 0.1
-      }
+      timeInForce: 'day' as TimeInForce,
+      reason: `Gamma hedge: ${gammaExposure.toFixed(2)} gamma exposure`,
+      confidence: 0.9
     };
   }
 
   /**
-   * Check if option positions need adjustment
+   * Scan for new gamma scalping opportunities
    */
-  private async checkOptionAdjustments(): Promise<Signal[]> {
+  private async scanForEntry(marketData: MarketData): Promise<Signal | null> {
+    // Look for high gamma options near the money
+    const atmStrike = Math.round(marketData.price / 5) * 5; // Round to nearest $5
+    
+    try {
+      // Get option chain
+      const options = await this.alpaca.getOptionContracts('system', {
+        underlyingSymbol: this.config.underlyingSymbol,
+        minStrike: atmStrike - 10,
+        maxStrike: atmStrike + 10,
+        minExpiration: 7,
+        maxExpiration: 45
+      });
+
+      // Find option with highest gamma
+      let bestOption: OptionWithGreeks | null = null;
+      let highestGamma = 0;
+
+      for (const option of options) {
+        const quote = await this.marketData.getOptionQuote(option.symbol);
+        if (quote && quote.greeks && quote.greeks.gamma > highestGamma) {
+          highestGamma = quote.greeks.gamma;
+          bestOption = { ...option, quote, greeks: quote.greeks };
+        }
+      }
+
+      if (bestOption && highestGamma > this.config.gammaThreshold) {
+        return {
+          action: 'buy',
+          symbol: bestOption.symbol,
+          side: 'buy',
+          quantity: 1,
+          orderType: 'limit' as OrderType,
+          timeInForce: 'day' as TimeInForce,
+          limitPrice: bestOption.quote!.askPrice,
+          reason: `High gamma opportunity: ${highestGamma.toFixed(4)}`,
+          confidence: 0.7
+        };
+      }
+    } catch (error) {
+      console.error('Error scanning for entry:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Check exit conditions for existing positions
+   */
+  private async checkExitConditions(marketData: MarketData): Promise<Signal[]> {
     const signals: Signal[] = [];
-    const underlyingPrice = await this.marketData.getStockPrice(this.config.underlyingSymbol);
 
-    for (const [_symbol, position] of Object.entries(this.positions)) {
-      if (position.assetClass !== AssetClass.US_OPTION || position.position === 0) {
-        continue;
-      }
+    for (const [symbol, position] of this.positions) {
+      const quote = await this.marketData.getOptionQuote(position.optionSymbol);
+      if (!quote) continue;
 
-      // Check if option is too far ITM or OTM
-      const moneyness = position.strikePrice! / underlyingPrice;
-      
-      if (position.optionType === 'call' && moneyness < 0.95) {
-        // Call is too deep ITM, consider rolling
+      const currentValue = quote.lastPrice * 100 * position.quantity;
+      const entryValue = position.entryPrice * 100 * position.quantity;
+      const pnlPercent = (currentValue - entryValue) / entryValue;
+
+      // Check stop loss
+      if (pnlPercent <= -this.config.stopLossPercent) {
         signals.push({
-          action: 'roll',
-          symbol,
+          action: 'sell',
+          symbol: position.optionSymbol,
           side: 'sell',
-          quantity: position.position,
+          quantity: position.quantity,
           orderType: 'market' as OrderType,
-          timeInForce: 'day',
-          reason: `Option too deep ITM (moneyness: ${moneyness.toFixed(3)})`,
-          confidence: 0.8
-        });
-      } else if (position.optionType === 'call' && moneyness > 1.15) {
-        // Call is too far OTM, consider rolling
-        signals.push({
-          action: 'roll',
-          symbol,
-          side: 'sell',
-          quantity: position.position,
-          orderType: 'market' as OrderType,
-          timeInForce: 'day',
-          reason: `Option too far OTM (moneyness: ${moneyness.toFixed(3)})`,
-          confidence: 0.8
+          timeInForce: 'day' as TimeInForce,
+          reason: `Stop loss triggered: ${(pnlPercent * 100).toFixed(2)}% loss`,
+          confidence: 1.0
         });
       }
 
-      // Check days to expiration
-      const daysToExpiry = Math.ceil(
-        (position.expirationDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      );
-      
-      if (daysToExpiry < 7) {
-        // Close positions nearing expiration
+      // Check take profit
+      if (pnlPercent >= this.config.takeProfitPercent) {
         signals.push({
-          action: 'close',
-          symbol,
-          side: position.position > 0 ? 'sell' : 'buy',
-          quantity: Math.abs(position.position),
-          orderType: 'market' as OrderType,
-          timeInForce: 'day',
-          reason: `Approaching expiration (${daysToExpiry} days)`,
+          action: 'sell',
+          symbol: position.optionSymbol,
+          side: 'sell',
+          quantity: position.quantity,
+          orderType: 'limit' as OrderType,
+          timeInForce: 'day' as TimeInForce,
+          limitPrice: quote.bidPrice,
+          reason: `Take profit triggered: ${(pnlPercent * 100).toFixed(2)}% gain`,
           confidence: 0.9
+        });
+      }
+
+      // Check if approaching expiration (< 7 days)
+      const daysToExpiry = this.calculateDaysToExpiry(position.expirationDate);
+      if (daysToExpiry < 7) {
+        signals.push({
+          action: 'roll',
+          symbol: position.optionSymbol,
+          side: 'sell',
+          quantity: position.quantity,
+          orderType: 'market' as OrderType,
+          timeInForce: 'day' as TimeInForce,
+          reason: `Rolling position: ${daysToExpiry} days to expiry`,
+          confidence: 0.8
         });
       }
     }
@@ -445,107 +299,31 @@ export class GammaScalpingStrategy extends TradingStrategy {
   }
 
   /**
-   * Execute initial option trades
+   * Calculate days to expiry
    */
-  private async executeInitialTrades(): Promise<void> {
-    console.log('Executing initial option trades');
-
-    for (const [_symbol, position] of Object.entries(this.positions)) {
-      if (position.assetClass === AssetClass.US_OPTION && position.initialPosition !== 0) {
-        const order: Order = {
-          symbol,
-          side: position.initialPosition > 0 ? 'buy' : 'sell',
-          quantity: Math.abs(position.initialPosition),
-          orderType: 'market',
-          timeInForce: 'day'
-        };
-
-        console.log(`Submitting order: ${order.side} ${order.quantity} ${symbol}`);
-        await this.alpaca.submitOrder(order);
-      }
-    }
+  private calculateDaysToExpiry(expirationDate: string): number {
+    const expiry = new Date(expirationDate);
+    const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.ceil((expiry.getTime() - now.getTime()) / msPerDay);
   }
 
   /**
-   * Liquidate existing positions
+   * Get current strategy state
    */
-  private async liquidateExistingPositions(): Promise<void> {
-    console.log(`Liquidating existing positions for ${this.config.underlyingSymbol}`);
-    
-    const allPositions = await this.alpaca.getAllPositions();
-    
-    for (const position of allPositions) {
-      if (position.assetClass === AssetClass.US_OPTION) {
-        const contract = await this.alpaca.getOptionContract(position.symbol);
-        if (contract.underlyingSymbol === this.config.underlyingSymbol) {
-          console.log(`Closing position: ${position.quantity} ${position.symbol}`);
-          await this.alpaca.closePosition(position.symbol);
-        }
-      } else if (position.symbol === this.config.underlyingSymbol) {
-        console.log(`Closing position: ${position.quantity} ${position.symbol}`);
-        await this.alpaca.closePosition(position.symbol);
-      }
-    }
-  }
-
-  /**
-   * Estimate required capital for the strategy
-   */
-  private estimateRequiredCapital(): number {
-    // Rough estimate: need enough to buy 100 shares + option premiums
-    // This should be refined based on actual market prices
-    return 10000; // $10k minimum
-  }
-
-  /**
-   * Handle position updates from trading events
-   */
-  async onPositionUpdate(symbol: string, newQuantity: number): Promise<void> {
-    if (symbol in this.positions) {
-      const oldQuantity = this.positions[symbol].position;
-      this.positions[symbol].position = newQuantity;
-      
-      console.log(`Position update: ${symbol} from ${oldQuantity} to ${newQuantity}`);
-      
-      // Trigger rebalance check after position update
-      const marketData = await this.marketData.getLatestData(this.config.underlyingSymbol);
-      await this.execute(marketData);
-    }
-  }
-
-  /**
-   * Get current strategy state for monitoring
-   */
-  getStrategyState(): any {
-    const portfolioDelta = this.calculatePortfolioDelta();
-    const portfolioGamma = this.calculatePortfolioGamma();
-    
+  getState() {
     return {
-      name: 'Gamma Scalping',
-      underlying: this.config.underlyingSymbol,
-      positions: this.positions,
+      name: this.name,
+      status: 'running' as const,
+      positions: Array.from(this.positions.entries()).map(([symbol, pos]) => ({
+        symbol,
+        ...pos
+      })),
       metrics: {
-        delta: portfolioDelta,
-        gamma: portfolioGamma,
-        deltaNotional: portfolioDelta * (this.positions[this.config.underlyingSymbol]?.lastPrice || 0),
-        optionCount: Object.values(this.positions).filter(p => p.assetClass === AssetClass.US_OPTION).length
+        totalPositions: this.positions.size,
+        gammaExposure: 0 // Would calculate async
       },
-      config: this.config
+      lastUpdate: new Date()
     };
-  }
-
-  /**
-   * Calculate total portfolio gamma
-   */
-  private calculatePortfolioGamma(): number {
-    let totalGamma = 0;
-
-    for (const position of Object.values(this.positions)) {
-      if (position.assetClass === AssetClass.US_OPTION && position.greeks) {
-        totalGamma += position.greeks.gamma * position.position * (position.contractSize || 100);
-      }
-    }
-
-    return totalGamma;
   }
 }

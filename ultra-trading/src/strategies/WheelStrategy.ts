@@ -70,10 +70,6 @@ export class WheelStrategy extends TradingStrategy {
   ) {
     super();
     this.config = {
-      strikePercentage: 0.02, // 2% below current price
-      targetDelta: -0.3, // 30 delta puts
-      atrMultiplier: 1.5,
-      atrPeriod: 14,
       ...config
     };
     

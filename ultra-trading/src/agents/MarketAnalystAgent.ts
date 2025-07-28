@@ -1,0 +1,272 @@
+/**
+ * Market Analyst Agent
+ * Powered by Google Gemini 2.0 Flash for real-time market analysis
+ */
+
+import { AIAgent } from './base/BaseAgent';
+import {
+  AgentType,
+  AgentMessage,
+  IMarketAnalystAgent,
+  MarketAnalysis,
+  MarketTrend,
+  VolatilityLevel,
+  PatternDetection,
+  TradingRecommendation,
+  MessageType,
+  AgentConfig
+} from '@/types/agents';
+import { MarketData } from '@/types/strategy';
+import { CloudflareBindings } from '@/types';
+
+interface GeminiAnalysisResponse {
+  trend: MarketTrend;
+  volatility: VolatilityLevel;
+  patterns: Array<{
+    name: string;
+    confidence: number;
+    target?: number;
+  }>;
+  support: number[];
+  resistance: number[];
+  recommendation: TradingRecommendation;
+  reasoning: string;
+}
+
+export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
+  private env?: CloudflareBindings;
+  
+  constructor(config: AgentConfig, env?: CloudflareBindings) {
+    super(AgentType.MARKET_ANALYST, {
+      ...config,
+      model: '@cf/google/gemini-2.0-flash',
+      temperature: 0.3, // Lower temperature for consistent analysis
+      maxTokens: 4096,
+      systemPrompt: `You are a professional market analyst AI specializing in technical analysis and market pattern recognition. 
+        Analyze market data and provide structured JSON responses with trend analysis, volatility assessment, pattern detection, and trading recommendations.
+        Focus on actionable insights for algorithmic trading systems.`
+    });
+    this.env = env;
+  }
+
+  protected async onInitialize(): Promise<void> {
+    this.logger.info('Market Analyst Agent initialized', {
+      model: this.config.model,
+      agentId: this.id
+    });
+  }
+
+  protected async handleMessage(message: AgentMessage): Promise<AgentMessage | null> {
+    switch (message.type) {
+      case MessageType.MARKET_UPDATE:
+        const marketData = message.payload as MarketData[];
+        const analysis = await this.analyzeMarket(marketData);
+        
+        return this.createMessage(
+          'BROADCAST',
+          MessageType.ANALYSIS_RESULT,
+          analysis
+        );
+        
+      default:
+        this.logger.debug('Ignoring message type', { type: message.type });
+        return null;
+    }
+  }
+
+  protected async onShutdown(): Promise<void> {
+    this.logger.info('Market Analyst Agent shutting down');
+  }
+
+  /**
+   * Analyze market data using Gemini
+   */
+  async analyzeMarket(data: MarketData[]): Promise<MarketAnalysis> {
+    if (data.length === 0) {
+      throw new Error('No market data provided for analysis');
+    }
+
+    const symbol = data[0].symbol;
+    const prompt = this.buildAnalysisPrompt(data);
+    
+    try {
+      let response: GeminiAnalysisResponse;
+      
+      if (this.env?.AI) {
+        // Use Cloudflare AI binding
+        const result = await this.env.AI.run(
+          this.config.model as string,
+          {
+            prompt,
+            max_tokens: this.config.maxTokens,
+            temperature: this.config.temperature
+          }
+        );
+        
+        response = JSON.parse(result.response) as GeminiAnalysisResponse;
+      } else {
+        // Fallback to mock response for development
+        response = this.generateMockAnalysis(data);
+      }
+
+      return {
+        timestamp: Date.now(),
+        symbol,
+        trend: response.trend,
+        volatility: response.volatility,
+        patterns: response.patterns.map(p => ({
+          pattern: p.name,
+          confidence: p.confidence,
+          priceTarget: p.target,
+          timeframe: '1D'
+        })),
+        support: response.support,
+        resistance: response.resistance,
+        recommendation: response.recommendation,
+        confidence: this.calculateConfidence(response)
+      };
+      
+    } catch (error) {
+      this.logger.error('Market analysis failed', { 
+        error: (error as Error).message,
+        symbol 
+      });
+      
+      // Return conservative analysis on error
+      return this.getConservativeAnalysis(symbol);
+    }
+  }
+
+  /**
+   * Detect patterns in market data
+   */
+  async detectPatterns(data: MarketData[]): Promise<PatternDetection[]> {
+    const analysis = await this.analyzeMarket(data);
+    return analysis.patterns;
+  }
+
+  /**
+   * Predict volatility for a symbol
+   */
+  async predictVolatility(symbol: string): Promise<VolatilityLevel> {
+    // For now, return moderate volatility
+    // TODO: Implement actual volatility prediction
+    return VolatilityLevel.MODERATE;
+  }
+
+  /**
+   * Build analysis prompt for Gemini
+   */
+  private buildAnalysisPrompt(data: MarketData[]): string {
+    const recentData = data.slice(-20); // Last 20 data points
+    const priceData = recentData.map(d => ({
+      timestamp: d.timestamp,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close || d.price,
+      volume: d.volume
+    }));
+
+    return `
+      Analyze the following market data and provide a structured JSON response:
+      
+      Symbol: ${data[0].symbol}
+      Data points: ${JSON.stringify(priceData, null, 2)}
+      
+      Please analyze:
+      1. Current market trend (STRONG_BULLISH, BULLISH, NEUTRAL, BEARISH, STRONG_BEARISH)
+      2. Volatility level (VERY_LOW, LOW, MODERATE, HIGH, EXTREME)
+      3. Technical patterns detected (with confidence 0-1)
+      4. Support and resistance levels
+      5. Trading recommendation (STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL)
+      
+      Response format:
+      {
+        "trend": "...",
+        "volatility": "...",
+        "patterns": [{"name": "...", "confidence": 0.8, "target": 150.5}],
+        "support": [145.0, 142.5],
+        "resistance": [152.0, 155.0],
+        "recommendation": "...",
+        "reasoning": "..."
+      }
+    `;
+  }
+
+  /**
+   * Generate mock analysis for development
+   */
+  private generateMockAnalysis(data: MarketData[]): GeminiAnalysisResponse {
+    const latestPrice = data[data.length - 1].price;
+    const priceChange = (data[data.length - 1].price - data[0].price) / data[0].price;
+    
+    let trend: MarketTrend;
+    let recommendation: TradingRecommendation;
+    
+    if (priceChange > 0.02) {
+      trend = MarketTrend.BULLISH;
+      recommendation = TradingRecommendation.BUY;
+    } else if (priceChange < -0.02) {
+      trend = MarketTrend.BEARISH;
+      recommendation = TradingRecommendation.SELL;
+    } else {
+      trend = MarketTrend.NEUTRAL;
+      recommendation = TradingRecommendation.HOLD;
+    }
+
+    return {
+      trend,
+      volatility: VolatilityLevel.MODERATE,
+      patterns: [
+        { name: 'Channel Formation', confidence: 0.75 },
+        { name: 'Support Test', confidence: 0.65, target: latestPrice * 0.98 }
+      ],
+      support: [latestPrice * 0.97, latestPrice * 0.95],
+      resistance: [latestPrice * 1.03, latestPrice * 1.05],
+      recommendation,
+      reasoning: 'Based on recent price action and technical indicators'
+    };
+  }
+
+  /**
+   * Calculate overall confidence score
+   */
+  private calculateConfidence(response: GeminiAnalysisResponse): number {
+    // Average pattern confidence
+    const patternConfidence = response.patterns.length > 0
+      ? response.patterns.reduce((sum, p) => sum + p.confidence, 0) / response.patterns.length
+      : 0.5;
+    
+    // Trend strength factor
+    const trendStrength = response.trend === MarketTrend.NEUTRAL ? 0.5 : 0.8;
+    
+    // Volatility factor (lower volatility = higher confidence)
+    const volatilityFactor = {
+      [VolatilityLevel.VERY_LOW]: 0.9,
+      [VolatilityLevel.LOW]: 0.8,
+      [VolatilityLevel.MODERATE]: 0.7,
+      [VolatilityLevel.HIGH]: 0.5,
+      [VolatilityLevel.EXTREME]: 0.3
+    }[response.volatility];
+    
+    return (patternConfidence + trendStrength + volatilityFactor) / 3;
+  }
+
+  /**
+   * Return conservative analysis on error
+   */
+  private getConservativeAnalysis(symbol: string): MarketAnalysis {
+    return {
+      timestamp: Date.now(),
+      symbol,
+      trend: MarketTrend.NEUTRAL,
+      volatility: VolatilityLevel.MODERATE,
+      patterns: [],
+      support: [],
+      resistance: [],
+      recommendation: TradingRecommendation.HOLD,
+      confidence: 0.3
+    };
+  }
+}

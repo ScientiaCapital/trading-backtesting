@@ -63,8 +63,7 @@
     "node_modules",
     "dist",
     ".wrangler",
-    "coverage",
-    "scripts"
+    "coverage"
   ],
   "ts-node": {
     "esm": true

@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { ApiContext } from '../types';
 import { AlpacaClient } from '../services/alpaca/AlpacaClient';
+import { AlpacaTradingService } from '../services/alpaca/AlpacaTradingService';
 import { OrderSide, OrderType, TimeInForce } from '../types/trading';
 import { 
   validateRequest,
@@ -193,19 +194,16 @@ tradingRoutes.get('/orders', async (c) => {
     
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
     
-    // Convert query status to the format expected by AlpacaClient
-    const alpacaQuery = { ...query };
-    if (query.status) {
-      // Convert from our API format to Alpaca's format
-      const statusMap: Record<string, string> = {
-        'open': 'open',
-        'closed': 'closed', 
-        'all': 'all'
-      };
-      alpacaQuery.status = statusMap[query.status] as any;
-    }
+    // Use AlpacaTradingService which accepts string literals
+    const tradingService = new AlpacaTradingService(c.env, c.req.header('X-Tenant-ID') || 'default');
     
-    const orders = await alpaca.getOrders(alpacaQuery);
+    const orders = await tradingService.getOrders(
+      query.status as 'open' | 'closed' | 'all' | undefined,
+      query.limit,
+      query.after,
+      query.until,
+      query.direction
+    );
     
     logger.info('Orders retrieved', { count: orders.length });
     return c.json(createApiResponse(orders));
@@ -315,10 +313,10 @@ tradingRoutes.get('/market/bars/:symbol', async (c) => {
     
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
     const marketData = alpaca.marketData;
-    const bars = await marketData.getBars(symbol, query);
+    const result = await marketData.getBars(symbol, query);
     
-    logger.info('Bars retrieved', { symbol, count: bars.length });
-    return c.json(createApiResponse(bars));
+    logger.info('Bars retrieved', { symbol, count: result.bars.length });
+    return c.json(createApiResponse(result.bars));
   } catch (error) {
     logger.error('Failed to get bars', { symbol, error: (error as Error).message });
     return c.json(createErrorResponse(createError('BARS_ERROR', 'Failed to retrieve bars')), 500);

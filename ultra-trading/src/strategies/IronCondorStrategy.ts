@@ -6,12 +6,11 @@
  */
 
 import { TradingStrategy, Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
-import { Order, OrderSide, OrderType, AssetClass } from '@/types/trading';
+import { OrderType, TimeInForce } from '@/types/trading';
 import { OptionContract, OptionQuote } from '@/types/options';
 import { AlpacaService } from '@/services/alpaca/trading-client';
 import { MarketDataService } from '@/services/market-data';
-import { BlackScholesEngine } from '@/utils/options-pricing';
-import { calculateImpliedVolatility } from '@/utils/options-pricing';
+import { BlackScholesEngine, calculateImpliedVolatility } from '@/utils/options-pricing';
 
 export interface IronCondorConfig {
   underlyingSymbol: string;
@@ -96,14 +95,6 @@ export class IronCondorStrategy extends TradingStrategy {
   ) {
     super();
     this.config = {
-      strikeRange: 0.15,
-      buyingPowerLimit: 0.05,
-      riskFreeRate: 0.01,
-      minExpiration: 7,
-      maxExpiration: 42,
-      openInterestThreshold: 100,
-      targetProfitPercentage: 0.4,
-      commonExpirationRange: [14, 35],
       ...config
     };
     
@@ -180,7 +171,6 @@ export class IronCondorStrategy extends TradingStrategy {
     }
 
     // Check buying power
-    const requiredBuyingPower = account.buyingPower * this.config.buyingPowerLimit;
     if (account.buyingPower < 5000) {
       errors.push('Insufficient buying power for Iron Condor strategy');
     }
@@ -300,8 +290,7 @@ export class IronCondorStrategy extends TradingStrategy {
    */
   private async selectOptimalLegs(
     putChain: OptionWithGreeks[],
-    callChain: OptionWithGreeks[],
-    underlyingPrice: number
+    callChain: OptionWithGreeks[]
   ): Promise<IronCondorLegs> {
     const legs: IronCondorLegs = {};
 
@@ -335,7 +324,7 @@ export class IronCondorStrategy extends TradingStrategy {
    */
   private selectLeg(
     options: OptionWithGreeks[],
-    criteria: any,
+    criteria: IronCondorCriteria[keyof IronCondorCriteria],
     legType: string
   ): OptionWithGreeks | undefined {
     const validOptions = options.filter(opt => {
@@ -487,7 +476,7 @@ export class IronCondorStrategy extends TradingStrategy {
   /**
    * Check exit conditions for existing position
    */
-  private async checkExitConditions(marketData: MarketData): Promise<Signal[]> {
+  private async checkExitConditions(_marketData: MarketData): Promise<Signal[]> {
     if (!this.currentPosition || !this.entryNetCredit) return [];
 
     const signals: Signal[] = [];
@@ -636,7 +625,7 @@ export class IronCondorStrategy extends TradingStrategy {
   /**
    * Get current strategy state
    */
-  getStrategyState(): any {
+  getStrategyState(): Record<string, unknown> {
     return {
       name: this.name,
       hasPosition: !!this.currentPosition,

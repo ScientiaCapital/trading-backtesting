@@ -17,14 +17,14 @@ export interface MarketDataConfig {
  * Provides access to real-time and historical market data
  */
 export class MarketDataService {
-  private readonly _config: MarketDataConfig;
-  private readonly _alpaca: AlpacaService;
+  private readonly config: MarketDataConfig;
+  private readonly alpaca: AlpacaService;
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5000; // 5 seconds
 
   constructor(alpaca: AlpacaService, config: MarketDataConfig = {}) {
-    this._alpaca = alpaca;
-    this._config = {
+    this.alpaca = alpaca;
+    this.config = {
       baseUrl: 'https://data.alpaca.markets',
       apiVersion: 'v2',
       maxRetries: 3,
@@ -122,7 +122,7 @@ export class MarketDataService {
     try {
       await this.getStockQuote(symbol);
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
