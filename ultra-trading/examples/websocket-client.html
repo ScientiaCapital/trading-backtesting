@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTRA Trading - Real-time Updates</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #00ff88;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: #00cc66;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background-color: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.connected {
+            background-color: #00ff88;
+            color: #000;
+        }
+        .status.disconnected {
+            background-color: #ff4444;
+            color: #fff;
+        }
+        .channels {
+            margin: 20px 0;
+        }
+        .channel-toggle {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .channel-toggle.active {
+            background-color: #00ff88;
+            color: #000;
+        }
+        .messages {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 4px;
+            border-left: 4px solid #00ff88;
+        }
+        .message.error {
+            border-left-color: #ff4444;
+        }
+        .message.warning {
+            border-left-color: #ffaa00;
+        }
+        .message-time {
+            color: #666;
+            font-size: 12px;
+        }
+        .message-channel {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ULTRA Trading - Real-time Updates</h1>
+        
+        <div class="controls">
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+            <button id="clearBtn">Clear Messages</button>
+            <span class="status disconnected" id="status">Disconnected</span>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="dailyPnL">$0.00</div>
+                <div class="stat-label">Daily P&L</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="targetProgress">0%</div>
+                <div class="stat-label">Target Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="positions">0</div>
+                <div class="stat-label">Open Positions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="messagesCount">0</div>
+                <div class="stat-label">Messages</div>
+            </div>
+        </div>
+
+        <div class="channels">
+            <h3>Channels:</h3>
+            <span class="channel-toggle active" data-channel="orders">Orders</span>
+            <span class="channel-toggle active" data-channel="positions">Positions</span>
+            <span class="channel-toggle active" data-channel="agent_status">Agent Status</span>
+            <span class="channel-toggle active" data-channel="agent_decisions">Agent Decisions</span>
+            <span class="channel-toggle active" data-channel="performance">Performance</span>
+            <span class="channel-toggle active" data-channel="daily_pnl">Daily P&L</span>
+            <span class="channel-toggle active" data-channel="alerts">Alerts</span>
+            <span class="channel-toggle active" data-channel="system_status">System Status</span>
+            <span class="channel-toggle active" data-channel="errors">Errors</span>
+        </div>
+
+        <div class="messages" id="messages"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+        const activeChannels = new Set([
+            'orders', 'positions', 'agent_status', 'agent_decisions',
+            'performance', 'daily_pnl', 'alerts', 'system_status', 'errors'
+        ]);
+
+        // Get the WebSocket URL based on current location
+        function getWebSocketUrl() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host || 'localhost:8787';
+            return `${protocol}//${host}/ws/realtime`;
+        }
+
+        // Update UI elements
+        const statusEl = document.getElementById('status');
+        const messagesEl = document.getElementById('messages');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const messagesCountEl = document.getElementById('messagesCount');
+        const dailyPnLEl = document.getElementById('dailyPnL');
+        const targetProgressEl = document.getElementById('targetProgress');
+        const positionsEl = document.getElementById('positions');
+
+        // Connect to WebSocket
+        function connect() {
+            if (ws) return;
+
+            const wsUrl = getWebSocketUrl();
+            console.log('Connecting to:', wsUrl);
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+
+                // Subscribe to all active channels
+                activeChannels.forEach(channel => {
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        channel: channel
+                    }));
+                });
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received:', data);
+                
+                // Handle different message types
+                if (data.type === 'connected') {
+                    addMessage('System', `Connected with client ID: ${data.clientId}`, 'system');
+                } else if (data.type === 'subscribed') {
+                    addMessage('System', `Subscribed to channel: ${data.channel}`, 'system');
+                } else if (data.channel && activeChannels.has(data.channel)) {
+                    handleChannelMessage(data);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addMessage('Error', 'WebSocket connection error', 'error');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                ws = null;
+            };
+        }
+
+        // Disconnect from WebSocket
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        // Add message to the display
+        function addMessage(channel, content, type = 'info') {
+            messageCount++;
+            messagesCountEl.textContent = messageCount;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div class="message-time">${time}</div>
+                <div class="message-channel">${channel}</div>
+                <div>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</div>
+            `;
+            
+            messagesEl.insertBefore(messageDiv, messagesEl.firstChild);
+            
+            // Keep only last 100 messages
+            while (messagesEl.children.length > 100) {
+                messagesEl.removeChild(messagesEl.lastChild);
+            }
+        }
+
+        // Handle channel-specific messages
+        function handleChannelMessage(data) {
+            const { channel, type, data: msgData } = data;
+            
+            switch (channel) {
+                case 'daily_pnl':
+                    dailyPnLEl.textContent = `$${msgData.value.toFixed(2)}`;
+                    targetProgressEl.textContent = `${msgData.progress.toFixed(1)}%`;
+                    addMessage(channel, `P&L: $${msgData.value.toFixed(2)} (${msgData.progress.toFixed(1)}% of target)`);
+                    break;
+                    
+                case 'positions':
+                    if (type === 'position.opened') {
+                        positionsEl.textContent = (parseInt(positionsEl.textContent) + 1).toString();
+                    } else if (type === 'position.closed') {
+                        positionsEl.textContent = Math.max(0, parseInt(positionsEl.textContent) - 1).toString();
+                    }
+                    addMessage(channel, `${type}: ${msgData.symbol} ${msgData.qty} shares`);
+                    break;
+                    
+                case 'alerts':
+                    addMessage(channel, msgData.message, type.includes('error') ? 'error' : 'warning');
+                    break;
+                    
+                case 'errors':
+                    addMessage(channel, `${msgData.message} (${msgData.context})`, 'error');
+                    break;
+                    
+                case 'system_status':
+                    addMessage(channel, `System ${msgData.status}: ${msgData.details?.message || ''}`, 
+                              msgData.status === 'online' ? 'info' : 'warning');
+                    break;
+                    
+                default:
+                    addMessage(channel, msgData);
+            }
+        }
+
+        // Clear messages
+        function clearMessages() {
+            messagesEl.innerHTML = '';
+            messageCount = 0;
+            messagesCountEl.textContent = '0';
+        }
+
+        // Handle channel toggles
+        document.querySelectorAll('.channel-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const channel = toggle.dataset.channel;
+                
+                if (activeChannels.has(channel)) {
+                    activeChannels.delete(channel);
+                    toggle.classList.remove('active');
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'unsubscribe',
+                            channel: channel
+                        }));
+                    }
+                } else {
+                    activeChannels.add(channel);
+                    toggle.classList.add('active');
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'subscribe',
+                            channel: channel
+                        }));
+                    }
+                }
+            });
+        });
+
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        clearBtn.addEventListener('click', clearMessages);
+
+        // Auto-connect on load
+        window.addEventListener('load', () => {
+            // Uncomment to auto-connect
+            // connect();
+        });
+    </script>
+</body>
+</html>

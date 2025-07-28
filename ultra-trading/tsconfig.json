@@ -57,13 +57,14 @@
     "src/**/*",
     "tests/**/*",
     "migrations/**/*",
-    "scripts/**/*"
+    "src/types/cloudflare-globals.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     ".wrangler",
-    "coverage"
+    "coverage",
+    "client-examples"
   ],
   "ts-node": {
     "esm": true

@@ -112,7 +112,11 @@ export class StrategyOptimizerAgent extends AIAgent implements IStrategyOptimize
         }
 
         const data = await apiResponse.json() as { content: Array<{ text: string }> };
-        response = JSON.parse(data.content[0].text) as ClaudeOptimizationResponse;
+        const firstContent = data.content[0];
+        if (!firstContent) {
+          throw new Error('No content received from Claude API');
+        }
+        response = JSON.parse(firstContent.text) as ClaudeOptimizationResponse;
       } else {
         // Fallback to mock response
         response = this.generateMockOptimization(strategy, marketConditions);
@@ -236,15 +240,15 @@ export class StrategyOptimizerAgent extends AIAgent implements IStrategyOptimize
     
     if (marketConditions.volatility === 'HIGH' || marketConditions.volatility === 'EXTREME') {
       // Reduce position sizes in high volatility
-      if (adjustedParams.maxPositionSize) {
-        adjustedParams.maxPositionSize *= 0.7;
+      if (adjustedParams['maxPositionSize']) {
+        adjustedParams['maxPositionSize'] *= 0.7;
       }
     }
     
     if (marketConditions.trend === 'BULLISH' || marketConditions.trend === 'STRONG_BULLISH') {
       // Adjust for bullish conditions
-      if (adjustedParams.takeProfitPercent) {
-        adjustedParams.takeProfitPercent *= 1.2;
+      if (adjustedParams['takeProfitPercent']) {
+        adjustedParams['takeProfitPercent'] *= 1.2;
       }
     }
 

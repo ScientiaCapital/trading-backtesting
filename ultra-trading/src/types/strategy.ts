@@ -22,6 +22,7 @@ export interface Signal {
   symbol: string;
   side?: 'buy' | 'sell';
   quantity?: number;
+  price?: number; // Market price at signal generation
   orderType: 'market' | 'limit' | 'stop';
   timeInForce: 'day' | 'gtc' | 'ioc' | 'fok';
   limitPrice?: number;

@@ -91,7 +91,11 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
       throw new Error('No market data provided for analysis');
     }
 
-    const symbol = data[0].symbol;
+    const firstDataPoint = data[0];
+    if (!firstDataPoint) {
+      throw new Error('Invalid market data provided');
+    }
+    const {symbol} = firstDataPoint;
     const prompt = this.buildAnalysisPrompt(data);
     
     try {
@@ -130,7 +134,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
       } else if (this.env?.AI) {
         // Use Cloudflare Workers AI
         const result = await this.env.AI.run(
-          this.config.model as string,
+          this.config.model as any,
           {
             prompt,
             max_tokens: this.config.maxTokens,
@@ -138,7 +142,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
           }
         );
         
-        response = JSON.parse(result.response) as GeminiAnalysisResponse;
+        response = JSON.parse((result as any).response || '{}') as GeminiAnalysisResponse;
       } else {
         // Fallback to mock response for development
         response = this.generateMockAnalysis(data);
@@ -183,7 +187,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
   /**
    * Predict volatility for a symbol
    */
-  async predictVolatility(symbol: string): Promise<VolatilityLevel> {
+  async predictVolatility(_symbol: string): Promise<VolatilityLevel> {
     // For now, return moderate volatility
     // TODO: Implement actual volatility prediction
     return VolatilityLevel.MODERATE;
@@ -206,7 +210,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
     return `
       Analyze the following market data and provide a structured JSON response:
       
-      Symbol: ${data[0].symbol}
+      Symbol: ${data[0]?.symbol || 'UNKNOWN'}
       Data points: ${JSON.stringify(priceData, null, 2)}
       
       Please analyze:
@@ -233,8 +237,15 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
    * Generate mock analysis for development
    */
   private generateMockAnalysis(data: MarketData[]): GeminiAnalysisResponse {
-    const latestPrice = data[data.length - 1].price;
-    const priceChange = (data[data.length - 1].price - data[0].price) / data[0].price;
+    const latestData = data[data.length - 1];
+    const firstData = data[0];
+    
+    if (!latestData || !firstData) {
+      throw new Error('Insufficient market data for analysis');
+    }
+    
+    const latestPrice = latestData.price;
+    const priceChange = (latestData.price - firstData.price) / firstData.price;
     
     let trend: MarketTrend;
     let recommendation: TradingRecommendation;

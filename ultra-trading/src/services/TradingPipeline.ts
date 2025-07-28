@@ -5,8 +5,9 @@
  */
 
 import { CloudflareBindings } from '@/types';
-import { AgentCoordinator } from '@/durable-objects/AgentCoordinator';
+// import { AgentCoordinator } from '@/durable-objects/AgentCoordinator';
 import { AlpacaTradingService } from './alpaca/AlpacaTradingService';
+import { RealtimeService } from './RealtimeService';
 import {
   TradingDecision,
   TradingAction,
@@ -42,6 +43,7 @@ export class TradingPipeline {
   private env: CloudflareBindings;
   private config: PipelineConfig;
   private tradingService: AlpacaTradingService;
+  private realtimeService: RealtimeService;
   private status: PipelineStatus;
   private coordinatorStub?: DurableObjectStub;
   
@@ -60,10 +62,11 @@ export class TradingPipeline {
     };
     
     this.tradingService = new AlpacaTradingService(
-      env.ALPACA_KEY_ID || '',
-      env.ALPACA_SECRET_KEY || '',
-      env.ENVIRONMENT === 'production'
+      env,
+      `pipeline-${Date.now()}`
     );
+    
+    this.realtimeService = new RealtimeService(env);
     
     this.status = {
       isRunning: false,
@@ -89,8 +92,8 @@ export class TradingPipeline {
     await this.initializeCoordinator();
 
     // Check market status
-    const marketStatus = await this.tradingService.getMarketStatus();
-    if (!marketStatus.is_open) {
+    const isMarketOpen = await this.tradingService.isMarketOpen();
+    if (!isMarketOpen) {
       throw new Error('Market is closed');
     }
 
@@ -102,6 +105,12 @@ export class TradingPipeline {
       tradesExecuted: 0,
       currentPositions: 0
     };
+
+    // Broadcast system status
+    await this.realtimeService.broadcastSystemStatus('online', {
+      message: 'Trading pipeline started',
+      config: this.config
+    });
 
     // Start trading loop
     await this.runTradingLoop();
@@ -116,6 +125,13 @@ export class TradingPipeline {
     this.status.isRunning = false;
     this.status.stoppedAt = new Date();
     this.status.reason = reason;
+
+    // Broadcast system status
+    await this.realtimeService.broadcastSystemStatus('offline', {
+      message: 'Trading pipeline stopped',
+      reason,
+      finalStatus: this.status
+    });
 
     // Cancel all pending orders
     await this.cancelAllPendingOrders();
@@ -174,6 +190,13 @@ export class TradingPipeline {
         // Update status
         this.status.dailyPnL = performance.dailyPnL;
 
+        // Broadcast performance update
+        await this.realtimeService.broadcastPerformanceUpdate(performance);
+        await this.realtimeService.broadcastDailyPnL(
+          performance.dailyPnL,
+          (performance.dailyPnL / this.config.dailyProfitTarget) * 100
+        );
+
         // Run trading cycle
         await this.executeTradingCycle();
 
@@ -182,6 +205,9 @@ export class TradingPipeline {
 
       } catch (error) {
         console.error('Trading loop error:', error);
+        
+        // Broadcast error
+        await this.realtimeService.broadcastError(error as Error, 'Trading loop');
         
         // Don't stop on errors, just log and continue
         await this.sleep(5000); // Wait 5 seconds on error
@@ -245,6 +271,9 @@ export class TradingPipeline {
           action: decision.action,
           confidence: decision.confidence
         });
+        
+        // Broadcast decision
+        await this.realtimeService.broadcastAgentDecision('COORDINATOR' as any, decision);
         
         return decision;
       }

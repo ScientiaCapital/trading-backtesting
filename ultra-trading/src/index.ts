@@ -165,7 +165,8 @@ app.get('/docs', async (c) => c.json({
         }
       },
       websockets: {
-        '/ws/trading': 'Real-time trading updates',
+        '/ws/trading/:sessionId': 'Trading session WebSocket (per-session)',
+        '/ws/realtime': 'Global real-time updates (orders, positions, agents)',
         '/ws/market-data': 'Live market data feeds'
       }
     }
@@ -232,6 +233,7 @@ app.onError((err, c) => {
  */
 export { TradingSession };
 export { AgentCoordinator } from './durable-objects/AgentCoordinator';
+export { RealtimeUpdates } from './durable-objects/RealtimeUpdates';
 
 /**
  * Export the worker with both Hono app and WebSocket handler
@@ -242,25 +244,32 @@ export default {
     
     // Handle WebSocket upgrades for /ws/* paths
     if (url.pathname.startsWith('/ws/')) {
-      const [, , sessionId] = url.pathname.split('/');
-      
-      if (!sessionId) {
-        return new Response('Missing session ID', { status: 400 });
-      }
-      
       // Check for WebSocket upgrade
       const upgradeHeader = request.headers.get('Upgrade');
       if (!upgradeHeader || upgradeHeader !== 'websocket') {
         return new Response('Expected Upgrade: websocket', { status: 426 });
       }
       
-      // Get or create Durable Object instance
-      const id = env.TRADING_SESSION.idFromName(sessionId);
-      const tradingSession = env.TRADING_SESSION.get(id);
+      // Route to appropriate Durable Object based on path
+      if (url.pathname.startsWith('/ws/realtime')) {
+        // Real-time updates WebSocket
+        const id = env.REALTIME_UPDATES.idFromName('global');
+        const realtimeUpdates = env.REALTIME_UPDATES.get(id);
+        return realtimeUpdates.fetch(request as any) as unknown as Response;
+      } else if (url.pathname.startsWith('/ws/trading/')) {
+        // Trading session WebSocket
+        const [, , sessionId] = url.pathname.split('/');
+        
+        if (!sessionId) {
+          return new Response('Missing session ID', { status: 400 });
+        }
+        
+        const id = env.TRADING_SESSION.idFromName(sessionId);
+        const tradingSession = env.TRADING_SESSION.get(id);
+        return tradingSession.fetch(request as any) as unknown as Response;
+      }
       
-      // Forward the request to the Durable Object
-      // Type assertion needed due to Cloudflare Workers type differences
-      return tradingSession.fetch(request as any) as unknown as Response;
+      return new Response('Invalid WebSocket path', { status: 404 });
     }
     
     // All other requests go to Hono
@@ -271,16 +280,17 @@ export default {
   /**
    * Scheduled handler for cron triggers
    */
-  async scheduled(event: ScheduledEvent, env: ApiContext['Bindings'], ctx: ExecutionContext): Promise<void> {
+  async scheduled(controller: ScheduledController, env: ApiContext['Bindings'], ctx: ExecutionContext): Promise<void> {
     // Import dynamically to avoid circular dependencies
     const { handleScheduled } = await import('./handlers/cron');
     
     // Handle the scheduled event
     await handleScheduled(
       {
-        cron: event.cron,
-        scheduledTime: event.scheduledTime
-      },
+        cron: controller.cron,
+        scheduledTime: controller.scheduledTime,
+        noRetry: () => controller.noRetry()
+      } as ScheduledEvent,
       env,
       ctx
     );

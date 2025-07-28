@@ -91,6 +91,10 @@
 			{
 				"name": "AGENT_COORDINATOR",
 				"class_name": "AgentCoordinator"
+			},
+			{
+				"name": "REALTIME_UPDATES",
+				"class_name": "RealtimeUpdates"
 			}
 		]
 	},
@@ -132,6 +136,10 @@
 		{
 			"tag": "v2",
 			"new_classes": ["AgentCoordinator"]
+		},
+		{
+			"tag": "v3",
+			"new_classes": ["RealtimeUpdates"]
 		}
 	],
 
@@ -177,6 +185,10 @@
 					{
 						"name": "AGENT_COORDINATOR",
 						"class_name": "AgentCoordinator"
+					},
+					{
+						"name": "REALTIME_UPDATES",
+						"class_name": "RealtimeUpdates"
 					}
 				]
 			}
@@ -219,6 +231,10 @@
 					{
 						"name": "AGENT_COORDINATOR",
 						"class_name": "AgentCoordinator"
+					},
+					{
+						"name": "REALTIME_UPDATES",
+						"class_name": "RealtimeUpdates"
 					}
 				]
 			}

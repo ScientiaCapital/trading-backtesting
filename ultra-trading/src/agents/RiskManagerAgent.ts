@@ -160,7 +160,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
       if (this.env?.AI) {
         // Use Cloudflare AI binding
         const result = await this.env.AI.run(
-          this.config.model as string,
+          this.config.model as any,
           {
             prompt,
             max_tokens: this.config.maxTokens,
@@ -168,7 +168,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
           }
         );
         
-        response = JSON.parse(result.response) as RiskAnalysisResponse;
+        response = JSON.parse((result as any).response || '{}') as RiskAnalysisResponse;
       } else {
         // Fallback to calculation-based assessment
         response = this.calculateRiskMetrics(positions, proposedTrade);
@@ -183,7 +183,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
         stopLoss: this.calculateStopLoss(pr.symbol, positions)
       }));
 
-      const alerts: RiskAlert[] = response.alerts;
+      const {alerts} = response;
       
       // Add automatic alerts based on thresholds
       if (response.portfolioRisk > this.MAX_PORTFOLIO_RISK) {
@@ -222,7 +222,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
     // Simplified VaR calculation
     // In production, this would use historical data and more sophisticated models
     const totalValue = positions.reduce((sum, pos) => 
-      sum + (pos.quantity * pos.averagePrice), 0
+      sum + (pos.quantity * pos.avgEntryPrice), 0
     );
     
     // Assume 2% daily volatility for simplification
@@ -237,7 +237,9 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
    */
   async checkLimits(trade: Signal): Promise<boolean> {
     // Check position size limit
-    const positionValue = trade.quantity * trade.price;
+    const quantity = trade.quantity || 0;
+    const price = trade.price || trade.limitPrice || 0;
+    const positionValue = quantity * price;
     const maxPositionValue = 10000; // $10k max per position
     
     if (positionValue > maxPositionValue) {
@@ -271,9 +273,9 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
     const positionsSummary = positions.map(p => ({
       symbol: p.symbol,
       quantity: p.quantity,
-      avgPrice: p.averagePrice,
-      currentValue: p.quantity * p.averagePrice,
-      unrealizedPnL: p.unrealizedPnL || 0
+      avgPrice: p.avgEntryPrice,
+      currentValue: p.quantity * p.avgEntryPrice,
+      unrealizedPL: p.unrealizedPL || 0
     }));
 
     return `
@@ -287,7 +289,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
       - Symbol: ${proposedTrade.symbol}
       - Action: ${proposedTrade.action}
       - Quantity: ${proposedTrade.quantity}
-      - Price: ${proposedTrade.price}
+      - Price: ${proposedTrade.price || proposedTrade.limitPrice || 'N/A'}
       ` : 'No proposed trade'}
       
       Risk Limits:
@@ -331,12 +333,12 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
     proposedTrade?: Signal
   ): RiskAnalysisResponse {
     const totalValue = positions.reduce((sum, pos) => 
-      sum + (pos.quantity * pos.averagePrice), 0
+      sum + (pos.quantity * pos.avgEntryPrice), 0
     );
     
     // Calculate position risks
     const positionRisks = positions.map(pos => {
-      const positionValue = pos.quantity * pos.averagePrice;
+      const positionValue = pos.quantity * pos.avgEntryPrice;
       const risk = positionValue / totalValue * 0.02; // Assume 2% volatility
       
       return {
@@ -367,7 +369,9 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
     }
     
     if (proposedTrade) {
-      const tradeValue = proposedTrade.quantity * proposedTrade.price;
+      const quantity = proposedTrade.quantity || 0;
+      const price = proposedTrade.price || proposedTrade.limitPrice || 0;
+      const tradeValue = quantity * price;
       const tradeRisk = (tradeValue / (totalValue + tradeValue)) * 0.02;
       
       if (tradeRisk > this.MAX_POSITION_RISK) {
@@ -375,7 +379,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
         alerts.push({
           level: 'WARNING',
           message: 'Proposed trade size too large',
-          action: `Reduce quantity to ${Math.floor(proposedTrade.quantity * 0.5)}`
+          action: `Reduce quantity to ${Math.floor(quantity * 0.5)}`
         });
       }
     }
@@ -399,7 +403,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
     if (!position) return undefined;
     
     // Simple 2% stop loss
-    return position.averagePrice * 0.98;
+    return position.avgEntryPrice * 0.98;
   }
 
   /**

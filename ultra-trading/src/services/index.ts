@@ -416,14 +416,14 @@ export class AIService {
   }
 
   private async analyzeWithGemini(request: AIAnalysisRequest): Promise<string> {
-    if (!this.ctx.env.GOOGLE_AI_API_KEY) {
+    if (!this.ctx.env.GOOGLE_API_KEY) {
       throw new AppError('CONFIG_ERROR', 'Google AI API key not configured');
     }
 
     const prompt = this.buildAnalysisPrompt(request);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.ctx.env.GOOGLE_AI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.ctx.env.GOOGLE_API_KEY}`,
       {
         method: 'POST',
         headers: {

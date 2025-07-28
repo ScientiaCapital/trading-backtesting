@@ -66,7 +66,7 @@ async function testEndpoint(endpoint: string, headers: any): Promise<{ status: n
       hostname: 'paper-api.alpaca.markets',
       path: endpoint,
       method: 'GET',
-      headers: headers
+      headers
     };
 
     const req = https.request(options, (res) => {

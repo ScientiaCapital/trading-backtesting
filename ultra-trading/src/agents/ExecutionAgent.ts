@@ -12,9 +12,9 @@ import {
   MessagePriority,
   AgentConfig,
   TradingDecision,
-  TradingAction
 } from '@/types/agents';
-import { Signal, Order, OrderType, TimeInForce } from '@/types/trading';
+import { Order, OrderType, TimeInForce, OrderSide, OrderStatus, AssetClass } from '@/types/trading';
+import { Signal } from '@/types/strategy';
 import { CloudflareBindings } from '@/types';
 import { AlpacaTradingService } from '@/services/alpaca/AlpacaTradingService';
 
@@ -74,9 +74,8 @@ export class ExecutionAgent extends BaseAgent {
     // Initialize trading service
     if (this.env) {
       this.tradingService = new AlpacaTradingService(
-        this.env.ALPACA_KEY_ID,
-        this.env.ALPACA_SECRET_KEY,
-        this.env.ENVIRONMENT === 'production'
+        this.env,
+        `execution-${Date.now()}`
       );
     }
     
@@ -216,11 +215,11 @@ export class ExecutionAgent extends BaseAgent {
       let orderType: OrderType = OrderType.MARKET;
       let timeInForce: TimeInForce = TimeInForce.DAY;
       
-      if (signal.quantity > this.MAX_ORDER_SIZE) {
+      if ((signal.quantity || 0) > this.MAX_ORDER_SIZE) {
         // Large order - use iceberg or TWAP
         return {
           orders: this.splitIntoChunks(signal),
-          estimatedFillPrice: signal.price,
+          estimatedFillPrice: signal.limitPrice || 0,
           estimatedSlippage: this.MAX_SLIPPAGE,
           executionStrategy: 'ICEBERG',
           timeframe: '5m',
@@ -239,21 +238,25 @@ export class ExecutionAgent extends BaseAgent {
       orders.push({
         id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         symbol: signal.symbol,
-        side: signal.action === 'BUY' ? 'buy' : 'sell',
-        quantity: signal.quantity,
-        type: orderType,
+        assetClass: AssetClass.US_EQUITY,
+        quantity: signal.quantity || 0,
+        filledQuantity: 0,
+        side: signal.action === 'buy' ? OrderSide.BUY : OrderSide.SELL,
+        orderType,
         timeInForce,
-        limitPrice: orderType === OrderType.LIMIT ? signal.price : undefined,
-        status: 'pending',
+        limitPrice: orderType === OrderType.LIMIT ? signal.limitPrice || 0 : undefined,
+        status: OrderStatus.PENDING_NEW,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         submittedAt: new Date()
       });
     }
     
     return {
       orders,
-      estimatedFillPrice: decision.signals[0]?.price || 0,
+      estimatedFillPrice: decision.signals[0]?.limitPrice || 0,
       estimatedSlippage: 0.001,
-      executionStrategy: orders[0]?.type === OrderType.MARKET ? 'MARKET' : 'LIMIT',
+      executionStrategy: orders[0]?.orderType === OrderType.MARKET ? 'MARKET' : 'LIMIT',
       timeframe: 'immediate',
       reasoning: 'Standard execution for normal market conditions'
     };
@@ -272,7 +275,7 @@ export class ExecutionAgent extends BaseAgent {
         const startTime = Date.now();
         
         // Place market order
-        const placedOrder = await this.tradingService.placeOrder({
+        const placedOrder = await this.tradingService.submitOrder({
           symbol: order.symbol,
           qty: order.quantity,
           side: order.side,
@@ -333,7 +336,7 @@ export class ExecutionAgent extends BaseAgent {
         const startTime = Date.now();
         
         // Place limit order
-        const placedOrder = await this.tradingService.placeOrder({
+        const placedOrder = await this.tradingService.submitOrder({
           symbol: order.symbol,
           qty: order.quantity,
           side: order.side,
@@ -391,12 +394,13 @@ export class ExecutionAgent extends BaseAgent {
     for (const order of orders) {
       const chunks = this.splitIntoChunks({
         symbol: order.symbol,
-        action: order.side === 'buy' ? 'BUY' : 'SELL',
+        action: order.side === OrderSide.BUY ? 'buy' : 'sell',
         quantity: order.quantity,
-        price: order.limitPrice || 0,
-        confidence: 0.8,
-        strategy: 'iceberg',
-        timestamp: Date.now()
+        orderType: 'market',
+        timeInForce: 'day',
+        limitPrice: order.limitPrice,
+        reason: 'Iceberg execution for large order',
+        confidence: 0.8
       });
       
       // Execute each chunk
@@ -454,7 +458,7 @@ export class ExecutionAgent extends BaseAgent {
    */
   private splitIntoChunks(signal: Signal): Order[] {
     const chunks: Order[] = [];
-    const totalQty = signal.quantity;
+    const totalQty = signal.quantity || 0;
     let remaining = totalQty;
     
     while (remaining > 0) {
@@ -463,11 +467,15 @@ export class ExecutionAgent extends BaseAgent {
       chunks.push({
         id: `order-${Date.now()}-${chunks.length}`,
         symbol: signal.symbol,
-        side: signal.action === 'BUY' ? 'buy' : 'sell',
+        assetClass: AssetClass.US_EQUITY,
         quantity: chunkSize,
-        type: OrderType.MARKET,
+        filledQuantity: 0,
+        side: signal.action === 'buy' ? OrderSide.BUY : OrderSide.SELL,
+        orderType: OrderType.MARKET,
         timeInForce: TimeInForce.DAY,
-        status: 'pending',
+        status: OrderStatus.PENDING_NEW,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         submittedAt: new Date()
       });
       
@@ -488,6 +496,10 @@ export class ExecutionAgent extends BaseAgent {
     while (Date.now() - startTime < timeout) {
       const order = await this.tradingService.getOrder(orderId);
       
+      if (!order) {
+        throw new Error(`Order not found: ${orderId}`);
+      }
+      
       if (order.status === 'filled' || order.status === 'partially_filled') {
         return order;
       }
@@ -506,7 +518,7 @@ export class ExecutionAgent extends BaseAgent {
   /**
    * Get market spread for a symbol
    */
-  private async getMarketSpread(symbol: string): Promise<number> {
+  private async getMarketSpread(_symbol: string): Promise<number> {
     // In production, get real-time quote
     // For now, return mock spread
     return 0.0005; // 0.05%

@@ -153,7 +153,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
     
     for (const position of this.positions.values()) {
       const currentOption = await this.marketData.getOptionQuote(position.optionSymbol);
-      if (currentOption && currentOption.greeks) {
+      if (currentOption?.greeks) {
         totalGamma += position.quantity * currentOption.greeks.gamma * 100; // Contract multiplier
       }
     }
@@ -210,7 +210,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
 
       for (const option of options) {
         const quote = await this.marketData.getOptionQuote(option.symbol);
-        if (quote && quote.greeks && quote.greeks.gamma > highestGamma) {
+        if (quote?.greeks && quote.greeks.gamma > highestGamma) {
           highestGamma = quote.greeks.gamma;
           bestOption = { ...option, quote, greeks: quote.greeks };
         }

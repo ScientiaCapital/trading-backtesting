@@ -3,6 +3,9 @@
  * Core types for trading operations
  */
 
+// Re-export Signal type from strategy (for backward compatibility)
+export type { Signal } from './strategy';
+
 export enum AssetClass {
   US_EQUITY = 'us_equity',
   US_OPTION = 'us_option',

@@ -292,7 +292,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
     try {
       if (this.env?.AI) {
         const result = await this.env.AI.run(
-          this.config.model as string,
+          this.config.model as any,
           {
             prompt,
             max_tokens: this.config.maxTokens,
@@ -300,7 +300,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
           }
         );
         
-        const analysis = JSON.parse(result.response) as PerformanceAnalysisResponse;
+        const analysis = JSON.parse((result as any).response || '{}') as PerformanceAnalysisResponse;
         
         // Log insights
         this.logger.info('Performance insights generated', {
@@ -355,7 +355,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
   /**
    * Reset daily metrics (called at midnight)
    */
-  public resetDailyMetrics(): void {
+  public override resetDailyMetrics(): void {
     this.logger.info('Resetting daily metrics', {
       previousMetrics: this.dailyMetrics
     });

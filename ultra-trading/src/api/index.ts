@@ -419,6 +419,11 @@ aiRoutes.post('/analyze', requireRole(['admin', 'trader']), async (c) => {
 import { tradingRoutes } from './trading';
 
 /**
+ * Real-time Routes - Import
+ */
+import realtimeRoutes from './realtime';
+
+/**
  * Root API Router
  * Combines all route modules
  */
@@ -433,6 +438,7 @@ export const createApiRouter = (): Hono<ApiContext> => {
   api.route('/backtests', backtestRoutes);
   api.route('/ai', aiRoutes);
   api.route('/trading', tradingRoutes);
+  api.route('/realtime', realtimeRoutes);
   
   return api;
 };

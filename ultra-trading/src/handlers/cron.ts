@@ -6,6 +6,7 @@
 import { CloudflareBindings } from '@/types';
 import { TradingPipeline } from '@/services/TradingPipeline';
 import { AlpacaTradingService } from '@/services/alpaca/AlpacaTradingService';
+import { RealtimeService } from '@/services/RealtimeService';
 
 interface CronEvent {
   cron: string;
@@ -15,9 +16,11 @@ interface CronEvent {
 export class CronHandler {
   private env: CloudflareBindings;
   private pipeline?: TradingPipeline;
+  private realtimeService: RealtimeService;
 
   constructor(env: CloudflareBindings) {
     this.env = env;
+    this.realtimeService = new RealtimeService(env);
   }
 
   /**
@@ -81,14 +84,13 @@ export class CronHandler {
 
     // Initialize trading service to check market status
     const tradingService = new AlpacaTradingService(
-      this.env.ALPACA_KEY_ID || '',
-      this.env.ALPACA_SECRET_KEY || '',
-      this.env.ENVIRONMENT === 'production'
+      this.env,
+      `cron-${Date.now()}`
     );
 
     // Verify market is open
-    const marketStatus = await tradingService.getMarketStatus();
-    if (!marketStatus.is_open) {
+    const isMarketOpen = await tradingService.isMarketOpen();
+    if (!isMarketOpen) {
       console.log('Market is not open yet');
       return;
     }
@@ -332,6 +334,10 @@ export class CronHandler {
     // In production, this could send to Slack, email, etc.
     console.log('Notification:', notification);
     
+    // Broadcast as alert
+    const severity = notification.type.includes('ERROR') ? 'error' : 'info';
+    await this.realtimeService.broadcastAlert(severity, notification.message, notification.data);
+    
     // Store in KV for dashboard
     const key = `notifications:${Date.now()}`;
     await this.env.CACHE.put(key, JSON.stringify(notification), {
@@ -360,7 +366,7 @@ export class CronHandler {
 export async function handleScheduled(
   event: CronEvent,
   env: CloudflareBindings,
-  ctx: ExecutionContext
+  _ctx: ExecutionContext
 ): Promise<void> {
   const handler = new CronHandler(env);
   await handler.handle(event);

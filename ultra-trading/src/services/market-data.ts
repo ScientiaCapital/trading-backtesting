@@ -22,8 +22,8 @@ export class MarketDataService {
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5000; // 5 seconds
 
-  constructor(alpaca: AlpacaService, config: MarketDataConfig = {}) {
-    this.alpaca = alpaca;
+  constructor(_alpaca: AlpacaService, _config: MarketDataConfig = {}) {
+    this.alpaca = _alpaca;
     this.config = {
       baseUrl: 'https://data.alpaca.markets',
       apiVersion: 'v2',

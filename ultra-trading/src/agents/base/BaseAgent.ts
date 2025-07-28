@@ -225,7 +225,7 @@ export abstract class AIAgent extends BaseAgent {
    */
   protected async callAIModel(
     prompt: string,
-    systemPrompt?: string
+    _systemPrompt?: string
   ): Promise<string> {
     try {
       // This will be implemented based on the specific AI service
@@ -249,7 +249,7 @@ export abstract class AIAgent extends BaseAgent {
   /**
    * Mock AI response for development
    */
-  protected mockAIResponse(prompt: string): string {
+  protected mockAIResponse(_prompt: string): string {
     // This is a placeholder - will be replaced with actual AI calls
     return JSON.stringify({
       analysis: 'Mock analysis response',

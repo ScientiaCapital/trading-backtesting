@@ -278,7 +278,7 @@ tradingRoutes.get('/market/quotes/:symbol', async (c) => {
   
   try {
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
-    const marketData = alpaca.marketData;
+    const {marketData} = alpaca;
     const quote = await marketData.getLatestQuote(symbol);
     
     logger.info('Quote retrieved', { symbol, bid: quote.bid_price, ask: quote.ask_price });
@@ -312,7 +312,7 @@ tradingRoutes.get('/market/bars/:symbol', async (c) => {
     });
     
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
-    const marketData = alpaca.marketData;
+    const {marketData} = alpaca;
     const result = await marketData.getBars(symbol, query);
     
     logger.info('Bars retrieved', { symbol, count: result.bars.length });

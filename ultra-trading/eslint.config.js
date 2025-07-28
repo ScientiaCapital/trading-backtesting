@@ -40,6 +40,18 @@ export default [
         // Cloudflare Workers specific globals
         btoa: 'readonly',
         atob: 'readonly',
+        // Additional Cloudflare Workers globals
+        DurableObjectStub: 'readonly',
+        WebSocketPair: 'readonly',
+        ScheduledEvent: 'readonly',
+        WebSocket: 'readonly',
+        // Node.js types
+        NodeJS: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
       },
     },
     plugins: {
@@ -131,6 +143,14 @@ export default [
     rules: {
       // Skip JS rules for SQL files
       '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.ts', 'scripts/**/*.js'],
+    rules: {
+      // Allow Node.js specific code in scripts
+      'no-undef': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
     },
   },
   {
