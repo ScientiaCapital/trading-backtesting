@@ -95,7 +95,15 @@ npm run dev
 
 **⚠️ IMPORTANT: This is a Workers application, NOT a Pages application**
 
+#### Automated Deployment via GitHub Actions
+1. **Push to main branch** → Automatically deploys to staging
+2. **Manual trigger** → Deploy to production via GitHub Actions workflow
+
+#### Manual Deployment
 ```bash
+# Validate build before deployment
+npm run validate:build
+
 # Deploy to staging
 npm run deploy:staging
 

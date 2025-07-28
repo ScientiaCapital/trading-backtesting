@@ -22,6 +22,7 @@
     "test:coverage": "vitest --coverage",
     "test:alpaca": "tsx scripts/test-alpaca.ts",
     "validate": "npm run type-check && npm run lint:check && npm run test",
+    "validate:build": "tsx scripts/validate-build.ts",
     "validate:deployment": "tsx scripts/validate-deployment.ts",
     "validate:production": "tsx scripts/validate-production.ts",
     "format": "prettier --write .",

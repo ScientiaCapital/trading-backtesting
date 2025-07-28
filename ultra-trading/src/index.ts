@@ -231,6 +231,7 @@ app.onError((err, c) => {
  * Required for Cloudflare Workers
  */
 export { TradingSession };
+export { AgentCoordinator } from './durable-objects/AgentCoordinator';
 
 /**
  * Export the worker with both Hono app and WebSocket handler

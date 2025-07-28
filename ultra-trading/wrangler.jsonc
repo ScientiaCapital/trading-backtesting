@@ -87,6 +87,10 @@
 			{
 				"name": "TRADING_SESSION",
 				"class_name": "TradingSession"
+			},
+			{
+				"name": "AGENT_COORDINATOR",
+				"class_name": "AgentCoordinator"
 			}
 		]
 	},
@@ -112,6 +116,10 @@
 		{
 			"tag": "v1",
 			"new_classes": ["TradingSession"]
+		},
+		{
+			"tag": "v2",
+			"new_classes": ["AgentCoordinator"]
 		}
 	],
 
@@ -153,6 +161,10 @@
 					{
 						"name": "TRADING_SESSION",
 						"class_name": "TradingSession"
+					},
+					{
+						"name": "AGENT_COORDINATOR",
+						"class_name": "AgentCoordinator"
 					}
 				]
 			}
@@ -191,6 +203,10 @@
 					{
 						"name": "TRADING_SESSION",
 						"class_name": "TradingSession"
+					},
+					{
+						"name": "AGENT_COORDINATOR",
+						"class_name": "AgentCoordinator"
 					}
 				]
 			}

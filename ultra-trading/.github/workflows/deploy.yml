@@ -1,57 +1,50 @@
 # GitHub Actions Workflow for ULTRA Trading Platform
-# 
-# ⚠️ MANUAL DEPLOYMENT ONLY
-# This repository is configured for manual Cloudflare Workers deployment via CLI.
-# Automatic deployments are disabled to prevent conflicts with Pages.
+# Automated deployment pipeline for Cloudflare Workers
 #
-# To deploy:
-# 1. Run locally: npm run deploy:staging
-# 2. Test staging environment
-# 3. Run locally: npm run deploy:production
-#
-# DO NOT enable automatic deployments without updating this workflow.
+# This workflow handles:
+# - Build validation
+# - Type checking and linting
+# - Test execution
+# - Automated deployment to staging
+# - Manual approval for production
 
-name: Manual Deployment Notice
+name: Deploy to Cloudflare Workers
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 jobs:
-  notice:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deployment Notice
-        run: |
-          echo "🚨 MANUAL DEPLOYMENT REQUIRED"
-          echo ""
-          echo "This is a Cloudflare Workers application."
-          echo "Deploy manually using:"
-          echo ""
-          echo "  npm run deploy:staging    # Deploy to staging"
-          echo "  npm run deploy:production # Deploy to production"
-          echo ""
-          echo "Current deployments:"
-          echo "  Production: https://ultra-trading.tkipper.workers.dev"
-          echo "  Staging: https://ultra-trading-staging.tkipper.workers.dev"
-          echo ""
-          echo "Do NOT enable automatic deployments via Pages."
-
   validate:
+    name: Validate Code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
+        
+      - name: Run build
+        run: npm run build
         
       - name: Run type check
         run: npm run type-check
@@ -61,3 +54,128 @@ jobs:
         
       - name: Run tests
         run: npm test
+        
+      - name: Validate deployment configuration
+        run: |
+          echo "Validating wrangler.jsonc configuration..."
+          npx wrangler deploy --dry-run
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://ultra-trading-staging.tkipper.workers.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Deploy to Cloudflare Workers (Staging)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Deploying to staging environment..."
+          npx wrangler deploy --env staging --minify
+          
+      - name: Run post-deployment tests
+        run: |
+          echo "Running health check on staging..."
+          curl -f https://ultra-trading-staging.tkipper.workers.dev/ping || exit 1
+          
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Staging deployment successful!"
+          else
+            echo "❌ Staging deployment failed!"
+          fi
+
+  deploy-production:
+    name: Deploy to Production
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://ultra-trading.tkipper.workers.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run production validation
+        run: npm run validate:production
+        
+      - name: Deploy to Cloudflare Workers (Production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Deploying to production environment..."
+          npx wrangler deploy --env production --minify
+          
+      - name: Run post-deployment tests
+        run: |
+          echo "Running health check on production..."
+          curl -f https://ultra-trading.tkipper.workers.dev/ping || exit 1
+          
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "🚀 Production deployment successful!"
+          else
+            echo "❌ Production deployment failed!"
+          fi
+
+  pull-request-preview:
+    name: PR Preview Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run validation
+        run: |
+          npm run validate
+          npx wrangler deploy --dry-run
+          
+      - name: Comment PR status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ All checks passed! This PR is ready for review.'
+            })
