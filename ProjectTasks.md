@@ -9,7 +9,29 @@
 
 ## 🚀 NEXT SPRINT PLAN (2025-01-29)
 
-**GOAL**: Complete WebSocket integration and implement remaining research arm agents.
+**GOAL**: Resolve Alpaca API credentials and stabilize core infrastructure.
+
+### 🚨 CRITICAL INFRASTRUCTURE ISSUES
+
+#### Priority 1: Fix Alpaca API Credentials ⚠️
+- **Issue**: 403 Forbidden responses from Alpaca API
+- **Impact**: Dashboard showing fallback data, can't execute real trades
+- **Status**: Identified but not resolved
+- **Next Steps**: 
+  - Verify credentials in Cloudflare Workers secrets
+  - Check if paper trading keys expired
+  - Test with fresh API credentials
+  - Validate environment variable mapping
+
+#### Priority 2: Test Agent Data Verification ⚠️
+- **Issue**: Agents reporting inconsistent/false numbers
+- **Impact**: Unreliable trading decisions
+- **Status**: Identified during testing
+- **Next Steps**:
+  - Audit all agent response validation
+  - Add data consistency checks
+  - Implement fallback mechanisms
+  - Test with known market conditions
 
 ### Pre-Flight Checklist ✅
 - [x] All API keys working (Anthropic, Gemini, Alpaca, Cloudflare)
@@ -71,11 +93,24 @@
 
 ### ✅ TODAY'S COMPLETED TASKS (2025-01-28)
 
-#### Fixed Critical Agent Speed Issue ✅
-- **Problem**: Agent analysis taking 1-3 seconds (missing trades)
-- **Solution**: Implemented SmartFastDecisionService
-- **Result**: 14.40ms average decision time (200x improvement)
-- **Impact**: Can now capture time-sensitive 0DTE opportunities
+#### Fixed Critical Agent Coordination Issues ✅
+- **Problem**: Agent message processing race conditions causing 3s timeouts
+- **Root Cause**: Flawed `waitForConsensus` method in AgentCoordinator
+- **Solution**: Replaced with synchronous `processMessageForDecision` method
+- **Result**: ~1ms decision time (3000x improvement from timeout)
+- **Impact**: Agents no longer stuck on "loading" state
+
+#### Fixed Gemini API Integration ✅
+- **Problem**: Using incorrect model name `gemini-2.0-flash`
+- **Solution**: Changed to `gemini-pro` with proper error handling
+- **Result**: MarketAnalystAgent now working correctly
+- **Validation**: All AI providers operational
+
+#### Fixed Dashboard Authentication Issues ✅
+- **Problem**: Hardcoded `isDev = true` causing production auth failures
+- **Solution**: Proper environment detection in middleware
+- **Result**: Dashboard loading with correct auth handling
+- **Public Endpoint**: `/dashboard-status` accessible without auth
 
 #### Implemented Research Arm Agents ✅
 1. **OptionsFlowAnalyst**:
