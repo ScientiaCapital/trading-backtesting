@@ -48,33 +48,33 @@ tradingRoutes.get('/dashboard-status', async (c) => {
     const positions = await alpaca.getPositions();
     
     // Calculate daily P&L
-    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(pos.unrealized_pl || '0'), 0);
+    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(pos.unrealizedPL || '0'), 0);
     
     const dashboardData = {
       clock: {
-        is_open: clock.is_open,
-        next_open: clock.next_open,
-        next_close: clock.next_close,
+        is_open: clock.isOpen,
+        next_open: clock.nextOpen,
+        next_close: clock.nextClose,
         timestamp: clock.timestamp
       },
       account: {
-        buyingPower: account.buying_power,
+        buyingPower: account.buyingPower,
         cash: account.cash,
-        portfolioValue: account.portfolio_value
+        portfolioValue: account.portfolioValue
       },
       positions: {
         count: positions.length,
         dailyPnL: dailyPnL,
-        totalValue: positions.reduce((sum, pos) => sum + parseFloat(pos.market_value || '0'), 0)
+        totalValue: positions.reduce((sum, pos) => sum + parseFloat(pos.marketValue || '0'), 0)
       },
       trading: {
         enabled: true, // Default enabled for now
-        mode: clock.is_open ? 'TRADING' : 'CLOSED'
+        mode: clock.isOpen ? 'TRADING' : 'CLOSED'
       }
     };
     
     logger.info('Dashboard status retrieved', { 
-      isOpen: clock.is_open,
+      isOpen: clock.isOpen,
       positionCount: positions.length,
       dailyPnL 
     });
