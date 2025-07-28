@@ -123,61 +123,33 @@
         }
         .profit { color: #00ff41; }
         .loss { color: #ff0041; }
-        .market-time {
-            font-size: 18px;
-            font-weight: bold;
-            color: #00ff41;
-            margin-bottom: 5px;
-        }
-        .session-progress {
-            width: 100%;
-            height: 20px;
-            background: #333;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .session-progress-bar {
-            height: 100%;
-            background: linear-gradient(to right, #00ff41, #ffaa00);
-            transition: width 1s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #0f0f0f;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>ULTRA Trading Platform - Live Dashboard
-            <span id="modeIndicator" class="mode-indicator mode-closed">LOADING...</span>
+            <span id="modeIndicator" class="mode-indicator">LOADING...</span>
         </h1>
         
         <div class="status-grid">
             <div class="status-card">
                 <h3>Market Status</h3>
-                <div class="market-time" id="marketTime">--:--:-- -- ET</div>
-                <div class="value" id="marketStatus">LOADING...</div>
+                <div id="marketTime">--:--:-- AM ET</div>
+                <div id="marketStatus" class="value">LOADING...</div>
                 <div>Next Open: <span id="nextOpen">--</span></div>
                 <div>Time to Open: <span id="timeToOpen">--</span></div>
-                <div class="session-progress">
-                    <div class="session-progress-bar" id="sessionProgress" style="width: 0%">0%</div>
-                </div>
             </div>
             
             <div class="status-card">
                 <h3>Trading Mode</h3>
-                <div class="value" id="tradingMode">LOADING...</div>
-                <div>Mode Since: <span id="modeSince">--</span></div>
-                <div>Switch Time: <span id="switchTime">11:00 AM ET</span></div>
+                <div id="tradingMode" class="value">LOADING...</div>
+                <div>Mode Since: <span id="modeSince">9:43:40 AM</span></div>
+                <div>Switch Time: 11:00 AM ET</div>
             </div>
             
             <div class="status-card">
                 <h3>Daily P&L</h3>
-                <div class="value" id="dailyPnL">$0.00</div>
+                <div id="dailyPnL" class="value">$0.00</div>
                 <div>Target: $300.00</div>
                 <div>Progress: <span id="targetProgress">0%</span></div>
             </div>
@@ -191,136 +163,38 @@
         </div>
         
         <div class="controls">
-            <button id="refreshBtn">Refresh Data</button>
-            <button id="enableTradingBtn">Enable Trading</button>
-            <button id="disableTradingBtn">Disable Trading</button>
+            <button onclick="updateStatus()">Refresh Data</button>
+            <button id="enableTradingBtn" onclick="setTradingEnabled(true)" disabled>Enable Trading</button>
+            <button id="disableTradingBtn" onclick="setTradingEnabled(false)">Disable Trading</button>
         </div>
         
         <div class="positions-container">
             <h3>Current Positions</h3>
-            <div id="positionsList">
-                <div class="position-item position-header">
-                    <div>Symbol</div>
-                    <div>Quantity</div>
-                    <div>Entry Price</div>
-                    <div>Current Value</div>
-                    <div>P&L</div>
-                </div>
-                <div id="positionsContent">
-                    <p style="text-align: center; color: #666;">No positions</p>
-                </div>
+            <div class="position-item position-header">
+                <div>Symbol</div>
+                <div>Quantity</div>
+                <div>Entry Price</div>
+                <div>Current Value</div>
+                <div>P&L</div>
+            </div>
+            <div id="positionsContent">
+                <p style="text-align: center; color: #666;">No positions</p>
             </div>
         </div>
         
         <div class="log-container">
             <h3>Live Activity Log</h3>
-            <div id="logEntries"></div>
+            <div id="logEntries">
+                <div class="log-entry info">[9:43:42 AM] Trading enabled</div>
+                <div class="log-entry warning">[9:43:42 AM] Enabling trading...</div>
+            </div>
         </div>
     </div>
-
+    
     <script>
         const API_BASE = '/api/v1/trading';
         let autoRefresh = true;
         let positions = [];
-        
-        // Trading Time Clock
-        class TradingTime {
-            constructor(date = new Date()) {
-                this.date = date;
-            }
-            
-            getMarketTime() {
-                // Get current time in ET
-                return new Date(this.date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            }
-            
-            getMarketTimeString() {
-                return this.date.toLocaleString('en-US', {
-                    timeZone: 'America/New_York',
-                    hour12: true,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            }
-            
-            isMarketOpen() {
-                const marketTime = this.getMarketTime();
-                const day = marketTime.getDay();
-                if (day === 0 || day === 6) return false;
-                
-                const hours = marketTime.getHours();
-                const minutes = marketTime.getMinutes();
-                const currentMinutes = hours * 60 + minutes;
-                
-                const openMinutes = 9 * 60 + 30; // 9:30 AM
-                const closeMinutes = 16 * 60; // 4:00 PM
-                
-                return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
-            }
-            
-            getSessionProgress() {
-                if (!this.isMarketOpen()) return 0;
-                
-                const marketTime = this.getMarketTime();
-                const hours = marketTime.getHours();
-                const minutes = marketTime.getMinutes();
-                const currentMinutes = hours * 60 + minutes;
-                
-                const openMinutes = 9 * 60 + 30;
-                const closeMinutes = 16 * 60;
-                const totalMinutes = closeMinutes - openMinutes;
-                
-                const elapsedMinutes = currentMinutes - openMinutes;
-                return Math.round((elapsedMinutes / totalMinutes) * 100);
-            }
-        }
-        
-        // Update market clock every second
-        function updateMarketClock() {
-            const tradingTime = new TradingTime();
-            const marketTimeEl = document.getElementById('marketTime');
-            const sessionProgressEl = document.getElementById('sessionProgress');
-            
-            if (marketTimeEl) {
-                marketTimeEl.textContent = tradingTime.getMarketTimeString() + ' ET';
-            }
-            
-            if (sessionProgressEl) {
-                const progress = tradingTime.getSessionProgress();
-                sessionProgressEl.style.width = progress + '%';
-                sessionProgressEl.textContent = progress + '%';
-            }
-        }
-        
-        // Update market time display with API data
-        function updateMarketTimeDisplay(marketTimeData) {
-            const { status, marketTime, nextEvents } = marketTimeData;
-            
-            // Update session indicator based on actual status
-            const sessionIndicator = document.getElementById('modeIndicator');
-            if (sessionIndicator) {
-                if (status.isOpen) {
-                    const marketHour = new Date().getHours();
-                    if (marketHour < 11) {
-                        sessionIndicator.textContent = 'OBSERVATION MODE';
-                        sessionIndicator.className = 'mode-indicator mode-observation';
-                    } else {
-                        sessionIndicator.textContent = 'TRADING MODE';
-                        sessionIndicator.className = 'mode-indicator mode-trading';
-                    }
-                } else if (status.isPreMarket) {
-                    sessionIndicator.textContent = 'PRE-MARKET';
-                    sessionIndicator.className = 'mode-indicator mode-observation';
-                } else if (status.isAfterHours) {
-                    sessionIndicator.textContent = 'AFTER-HOURS';
-                    sessionIndicator.className = 'mode-indicator mode-observation';
-                } else {
-                    sessionIndicator.textContent = 'MARKET CLOSED';
-                    sessionIndicator.className = 'mode-indicator mode-closed';
-                }
-            }
-        }
         
         // Add log entry
         function addLog(message, type = 'info') {
@@ -355,7 +229,7 @@
                 
                 return `
                     <div class="position-item">
-                        <div>${pos.symbol}${pos.option_type ? ` ${pos.option_type.toUpperCase()} ${pos.strike}` : ''}</div>
+                        <div>${pos.symbol}</div>
                         <div>${pos.qty}</div>
                         <div>$${parseFloat(pos.avg_entry_price).toFixed(2)}</div>
                         <div>$${parseFloat(pos.market_value).toLocaleString()}</div>
@@ -365,39 +239,25 @@
             }).join('');
         }
         
-        // Fetch market time status
-        async function fetchMarketTimeStatus() {
-            try {
-                const res = await fetch('/api/v1/market-time/status');
-                const data = await res.json();
-                if (data.success) {
-                    return data.data;
-                }
-            } catch (error) {
-                console.error('Failed to fetch market time:', error);
-            }
-            return null;
-        }
-        
         // Fetch and update status
         async function updateStatus() {
             try {
-                // Get market time status first
-                const marketTimeStatus = await fetchMarketTimeStatus();
-                if (marketTimeStatus) {
-                    updateMarketTimeDisplay(marketTimeStatus);
-                }
+                addLog('Updating dashboard status...', 'info');
                 
-                // Get market clock
-                const clockRes = await fetch(`${API_BASE}/clock`);
-                const clockData = await clockRes.json();
+                // Get unified dashboard status
+                const dashboardRes = await fetch(`${API_BASE}/dashboard-status`);
+                const dashboardData = await dashboardRes.json();
                 
-                if (clockData.success) {
-                    const clock = clockData.data;
-                    const isOpen = clock.is_open;
+                if (dashboardData.success) {
+                    const data = dashboardData.data;
                     
+                    // Update market status
+                    const isOpen = data.clock.is_open;
                     document.getElementById('marketStatus').textContent = isOpen ? 'OPEN' : 'CLOSED';
                     document.getElementById('marketStatus').className = `value ${isOpen ? 'positive' : 'negative'}`;
+                    
+                    // Update current time
+                    document.getElementById('marketTime').textContent = new Date().toLocaleTimeString() + ' ET';
                     
                     // Update mode indicator based on market status and time
                     const now = new Date();
@@ -422,58 +282,61 @@
                         tradingMode.className = 'value positive';
                     }
                     
-                    const nextOpen = new Date(clock.next_open);
-                    document.getElementById('nextOpen').textContent = nextOpen.toLocaleTimeString();
-                    
-                    // Calculate time to open
-                    const msToOpen = nextOpen - now;
-                    if (msToOpen > 0 && !isOpen) {
-                        const hours = Math.floor(msToOpen / (1000 * 60 * 60));
-                        const minutes = Math.floor((msToOpen % (1000 * 60 * 60)) / (1000 * 60));
-                        document.getElementById('timeToOpen').textContent = `${hours}h ${minutes}m`;
-                    } else {
-                        document.getElementById('timeToOpen').textContent = isOpen ? 'Market is open' : '--';
+                    // Update market timing
+                    if (data.clock.next_open) {
+                        const nextOpen = new Date(data.clock.next_open);
+                        document.getElementById('nextOpen').textContent = nextOpen.toLocaleTimeString();
+                        
+                        // Calculate time to open
+                        const msToOpen = nextOpen - now;
+                        if (msToOpen > 0 && !isOpen) {
+                            const hours = Math.floor(msToOpen / (1000 * 60 * 60));
+                            const minutes = Math.floor((msToOpen % (1000 * 60 * 60)) / (1000 * 60));
+                            document.getElementById('timeToOpen').textContent = `${hours}h ${minutes}m`;
+                        } else {
+                            document.getElementById('timeToOpen').textContent = isOpen ? 'Market is open' : '--';
+                        }
                     }
-                }
-                
-                // Get trading status
-                const statusRes = await fetch(`${API_BASE}/status`);
-                const statusData = await statusRes.json();
-                
-                if (statusData.success) {
-                    const status = statusData.data;
-                    document.getElementById('buyingPower').textContent = `$${parseFloat(status.buyingPower).toLocaleString()}`;
-                    document.getElementById('cash').textContent = `$${parseFloat(status.cash).toLocaleString()}`;
                     
-                    // Update trading enabled buttons
-                    document.getElementById('enableTradingBtn').disabled = status.tradingEnabled;
-                    document.getElementById('disableTradingBtn').disabled = !status.tradingEnabled;
-                }
-                
-                // Get positions
-                const positionsRes = await fetch(`${API_BASE}/positions`);
-                const positionsData = await positionsRes.json();
-                
-                if (positionsData.success) {
-                    positions = positionsData.data;
-                    updatePositionsDisplay(positions);
+                    // Update account information
+                    document.getElementById('buyingPower').textContent = `$${parseFloat(data.account.buyingPower || 0).toLocaleString()}`;
+                    document.getElementById('cash').textContent = `$${parseFloat(data.account.cash || 0).toLocaleString()}`;
+                    document.getElementById('positionCount').textContent = data.positions.count || 0;
                     
-                    // Calculate daily P&L from positions
-                    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(pos.unrealized_pl || 0), 0);
+                    // Update daily P&L
+                    const dailyPnL = data.positions.dailyPnL || 0;
                     document.getElementById('dailyPnL').textContent = `$${dailyPnL.toFixed(2)}`;
                     document.getElementById('dailyPnL').className = `value ${dailyPnL >= 0 ? 'positive' : 'negative'}`;
                     
-                    const progress = Math.min(100, (dailyPnL / 300) * 100);
+                    const progress = Math.min(100, Math.max(0, (dailyPnL / 300) * 100));
                     document.getElementById('targetProgress').textContent = `${progress.toFixed(1)}%`;
+                    
+                    // Update trading status buttons
+                    const tradingEnabled = data.trading.enabled;
+                    document.getElementById('enableTradingBtn').disabled = tradingEnabled;
+                    document.getElementById('disableTradingBtn').disabled = !tradingEnabled;
+                    
+                    // Update mode time
+                    document.getElementById('modeSince').textContent = new Date().toLocaleTimeString();
+                    
+                    addLog('Dashboard updated successfully', 'info');
+                } else {
+                    addLog(`Dashboard API error: ${dashboardData.error?.message || 'Unknown error'}`, 'error');
+                    
+                    // Show error states
+                    document.getElementById('marketStatus').textContent = 'ERROR';
+                    document.getElementById('tradingMode').textContent = 'ERROR';
+                    document.getElementById('modeIndicator').textContent = 'ERROR';
+                    document.getElementById('modeIndicator').className = 'mode-indicator mode-closed';
                 }
-                
-                // Update mode time
-                document.getElementById('modeSince').textContent = new Date().toLocaleTimeString();
-                
-                addLog('Status updated successfully', 'info');
                 
             } catch (error) {
                 addLog(`Error updating status: ${error.message}`, 'error');
+                
+                // Show loading states on error
+                document.getElementById('marketStatus').textContent = 'LOADING...';
+                document.getElementById('tradingMode').textContent = 'LOADING...';
+                document.getElementById('modeIndicator').textContent = 'LOADING...';
             }
         }
         
@@ -497,18 +360,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             addLog('Dashboard initialized', 'info');
             addLog('Observation mode: 9:30 AM - 11:00 AM ET', 'warning');
-            addLog('Trading mode: 11:00 AM - 4:00 PM ET', 'info');
             
-            // Set up event listeners
-            document.getElementById('refreshBtn').addEventListener('click', updateStatus);
-            document.getElementById('enableTradingBtn').addEventListener('click', () => setTradingEnabled(true));
-            document.getElementById('disableTradingBtn').addEventListener('click', () => setTradingEnabled(false));
-            
-            // Start market clock
-            updateMarketClock();
-            setInterval(updateMarketClock, 1000); // Update every second
-            
-            // Initial update
+            // Initial status update
             updateStatus();
             
             // Auto-refresh every 10 seconds

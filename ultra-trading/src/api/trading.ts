@@ -31,10 +31,100 @@ import { devAuthMiddleware } from '../middleware/dev-auth';
  */
 export const tradingRoutes = new Hono<ApiContext>();
 
-// Apply middleware to all trading routes
+/**
+ * Public Dashboard Status (No Auth Required)  
+ * Returns market status and basic trading info for dashboard
+ */
+tradingRoutes.get('/dashboard-status', async (c) => {
+  const logger = createLogger(c);
+  
+  try {
+    // Get market clock without auth
+    const alpaca = new AlpacaClient(c.env, 'dashboard');
+    const clock = await alpaca.getClock();
+    
+    // Get basic account info for dashboard
+    const account = await alpaca.getAccount();
+    const positions = await alpaca.getPositions();
+    
+    // Calculate daily P&L
+    const dailyPnL = positions.reduce((sum, pos) => sum + parseFloat(pos.unrealized_pl || '0'), 0);
+    
+    const dashboardData = {
+      clock: {
+        is_open: clock.is_open,
+        next_open: clock.next_open,
+        next_close: clock.next_close,
+        timestamp: clock.timestamp
+      },
+      account: {
+        buyingPower: account.buying_power,
+        cash: account.cash,
+        portfolioValue: account.portfolio_value
+      },
+      positions: {
+        count: positions.length,
+        dailyPnL: dailyPnL,
+        totalValue: positions.reduce((sum, pos) => sum + parseFloat(pos.market_value || '0'), 0)
+      },
+      trading: {
+        enabled: true, // Default enabled for now
+        mode: clock.is_open ? 'TRADING' : 'CLOSED'
+      }
+    };
+    
+    logger.info('Dashboard status retrieved', { 
+      isOpen: clock.is_open,
+      positionCount: positions.length,
+      dailyPnL 
+    });
+    
+    return c.json(createApiResponse(dashboardData));
+  } catch (error) {
+    logger.error('Failed to get dashboard status', { error: (error as Error).message });
+    
+    // Return fallback data for dashboard
+    return c.json(createApiResponse({
+      clock: {
+        is_open: false,
+        next_open: new Date().toISOString(),
+        next_close: new Date().toISOString(),
+        timestamp: new Date().toISOString()
+      },
+      account: {
+        buyingPower: '0',
+        cash: '0',
+        portfolioValue: '0'
+      },
+      positions: {
+        count: 0,
+        dailyPnL: 0,
+        totalValue: 0
+      },
+      trading: {
+        enabled: false,
+        mode: 'ERROR'
+      }
+    }));
+  }
+});
+
+// Apply middleware to all other trading routes (not dashboard-status)
 // For development, use devAuthMiddleware instead of authMiddleware
-const isDev = true; // TODO: Check c.env.ENVIRONMENT === 'development'
-tradingRoutes.use('*', isDev ? devAuthMiddleware : authMiddleware);
+tradingRoutes.use('*', async (c, next) => {
+  // Skip auth for dashboard-status endpoint
+  if (c.req.path.endsWith('/dashboard-status')) {
+    await next();
+    return;
+  }
+  
+  const isDev = c.env.ENVIRONMENT === 'development' || c.env.ENVIRONMENT === undefined;
+  if (isDev) {
+    return devAuthMiddleware(c, next);
+  } else {
+    return authMiddleware(c, next);
+  }
+});
 // Temporarily disable tenant isolation for testing
 // tradingRoutes.use('*', tenantIsolationMiddleware);
 tradingRoutes.use('*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 200 })); // Alpaca limit
