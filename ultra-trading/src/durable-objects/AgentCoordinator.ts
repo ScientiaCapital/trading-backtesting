@@ -18,6 +18,9 @@ import {
 } from '@/types/agents';
 import { MarketAnalystAgent } from '@/agents/MarketAnalystAgent';
 import { StrategyOptimizerAgent } from '@/agents/StrategyOptimizerAgent';
+import { RiskManagerAgent } from '@/agents/RiskManagerAgent';
+import { PerformanceAnalystAgent } from '@/agents/PerformanceAnalystAgent';
+import { ExecutionAgent } from '@/agents/ExecutionAgent';
 import { CloudflareBindings } from '@/types';
 
 export class AgentCoordinator {
@@ -120,8 +123,31 @@ export class AgentCoordinator {
     await strategyOptimizer.initialize();
     this.agents.set(AgentType.STRATEGY_OPTIMIZER, strategyOptimizer);
     
-    // Additional agents will be added here
-    console.log('All agents initialized');
+    // Risk Manager Agent
+    const riskManager = new RiskManagerAgent(
+      { agentType: AgentType.RISK_MANAGER },
+      this.env
+    );
+    await riskManager.initialize();
+    this.agents.set(AgentType.RISK_MANAGER, riskManager);
+    
+    // Performance Analyst Agent
+    const performanceAnalyst = new PerformanceAnalystAgent(
+      { agentType: AgentType.PERFORMANCE_ANALYST },
+      this.env
+    );
+    await performanceAnalyst.initialize();
+    this.agents.set(AgentType.PERFORMANCE_ANALYST, performanceAnalyst);
+    
+    // Execution Agent
+    const executionAgent = new ExecutionAgent(
+      { agentType: AgentType.EXECUTION },
+      this.env
+    );
+    await executionAgent.initialize();
+    this.agents.set(AgentType.EXECUTION, executionAgent);
+    
+    console.log('All AI agents initialized successfully!');
   }
 
   /**
