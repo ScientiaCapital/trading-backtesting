@@ -312,7 +312,7 @@ export class AlpacaWebSocketService {
    * Handle WebSocket message
    * @internal Currently unused - WebSocket implementation requires Durable Objects
    */
-  private __handleMessage(data: string): void {
+  private _handleMessage(data: string): void {
     try {
       const messages = data.split('\n').filter(m => m.trim());
       
@@ -487,7 +487,7 @@ export class AlpacaWebSocketService {
   /**
    * Handle reconnection
    */
-  private async __handleReconnect(): Promise<void> {
+  private async _handleReconnect(): Promise<void> {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.logger.error('Max reconnection attempts reached');
       this.state = ConnectionState.ERROR;
@@ -513,7 +513,7 @@ export class AlpacaWebSocketService {
       this.logger.error('Reconnection failed', {
         error: (error as Error).message
       });
-      await this.__handleReconnect();
+      await this._handleReconnect();
     }
   }
 

@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { CloudflareBindings } from '@/types';
 import { createApiResponse, createErrorResponse, createError } from '@/utils';
-import { TradingTime, MarketClock } from '@/utils/TradingTime';
+import { TradingTime } from '@/utils/TradingTime';
 
 const marketTimeRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 

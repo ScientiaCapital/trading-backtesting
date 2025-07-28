@@ -45,7 +45,7 @@ agentRoutes.post('/decision', async (c) => {
       timestamp: new Date().toISOString()
     });
     
-    return c.json(decision);
+    return c.json(createApiResponse(decision));
   } catch (error) {
     return c.json(
       createErrorResponse(createError('DECISION_ERROR', 'Failed to make trading decision')),
@@ -194,12 +194,19 @@ agentRoutes.post('/test/market-analysis', async (c) => {
       }) as any
     );
     
-    // Request analysis from agents
+    // Request analysis from agents using decision endpoint
     const analysisResponse = await coordinator.fetch(
-      new Request('https://coordinator/analyze', {
+      new Request('https://coordinator/decision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketData, requestAnalysis: true })
+        body: JSON.stringify({ 
+          context: { 
+            marketData,
+            positions: [],
+            dailyPnL: 0
+          },
+          useQuickDecision: false // Use AI agents for this test
+        })
       }) as any
     );
     

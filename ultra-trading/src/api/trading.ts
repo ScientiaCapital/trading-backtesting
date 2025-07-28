@@ -418,14 +418,14 @@ tradingRoutes.get('/status', async (c) => {
     const status = {
       tradingEnabled: tradingEnabled?.enabled ?? false,
       marketOpen: clock.isOpen,
-      accountStatus: account.status,
-      accountBlocked: account.account_blocked,
-      tradingBlocked: account.trading_blocked,
-      patternDayTrader: account.pattern_day_trader,
-      daytradeCount: account.daytrade_count,
-      buyingPower: account.buying_power,
-      cash: account.cash,
-      portfolioValue: account.portfolio_value
+      accountStatus: (account as any).status || 'active',
+      accountBlocked: account.accountBlocked || false,
+      tradingBlocked: account.tradingBlocked || false,
+      patternDayTrader: account.patternDayTrader || false,
+      daytradeCount: account.daytradeCount || 0,
+      buyingPower: account.buyingPower || '0',
+      cash: account.cash || '0',
+      portfolioValue: account.portfolioValue || '0'
     };
     
     logger.info('Trading status retrieved', status);

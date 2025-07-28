@@ -3,7 +3,7 @@
  * Manages WebSocket connections for real-time trading updates
  */
 
-import type { DurableObjectState, DurableObjectStorage } from '@cloudflare/workers-types';
+import type { DurableObjectState } from '@cloudflare/workers-types';
 
 interface Client {
   id: string;
@@ -72,7 +72,7 @@ export class RealtimeUpdates {
     }
     
     // Accept the WebSocket connection
-    this.state.acceptWebSocket(server);
+    this.state.acceptWebSocket(server as any);
     
     // Generate unique client ID
     const clientId = crypto.randomUUID();

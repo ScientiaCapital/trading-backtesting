@@ -63,10 +63,11 @@ export abstract class BaseAgent implements IAgent {
     
     try {
       this.status = AgentStatus.ANALYZING;
-      this.logger.debug('Processing message', { 
+      this.logger.info('Processing message', { 
         messageId: message.id,
         type: message.type,
-        from: message.from 
+        from: message.from,
+        agentType: this.type
       });
       
       // Process based on message type
@@ -213,11 +214,21 @@ export abstract class AIAgent extends BaseAgent {
   protected getModelEndpoint(): string {
     switch (this.type) {
       case AgentType.MARKET_ANALYST:
-        return '@cf/google/gemini-2.0-flash';
+        return 'gemini-2.0-flash'; // External API
       case AgentType.STRATEGY_OPTIMIZER:
-        return 'claude-4-opus';
+        return 'claude-3-opus-20240229'; // External API
+      case AgentType.RISK_MANAGER:
+        return '@cf/mistralai/mistral-small-3.1-24b-instruct';
+      case AgentType.PERFORMANCE_ANALYST:
+        return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+      case AgentType.EXECUTION:
+        return '@cf/mistralai/mistral-small-3.1-24b-instruct';
+      case AgentType.OPTIONS_FLOW_ANALYST:
+        return '@cf/qwen/qwq-32b';
+      case AgentType.MARKET_HOURS_RESEARCHER:
+        return '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b';
       default:
-        return '@cf/mistral/mistral-7b-instruct';
+        return '@cf/meta/llama-3.1-8b-instruct'; // Default fallback
     }
   }
 

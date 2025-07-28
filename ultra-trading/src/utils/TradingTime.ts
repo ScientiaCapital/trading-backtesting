@@ -24,7 +24,7 @@ export class TradingTime {
   private date: Date;
   private readonly timezone = 'America/New_York'; // NYSE timezone
   
-  // Market hours in ET
+  // Market hours in ET (used in methods)
   private readonly MARKET_HOURS: MarketHours = {
     preMarket: { start: '04:00', end: '09:30' },
     regular: { start: '09:30', end: '16:00' },

@@ -31,7 +31,7 @@ export class StrategyOptimizerAgent extends AIAgent implements IStrategyOptimize
   constructor(config: AgentConfig, env?: CloudflareBindings) {
     super(AgentType.STRATEGY_OPTIMIZER, {
       ...config,
-      model: 'claude-4-opus',
+      model: env?.ANTHROPIC_API_KEY ? 'claude-3-opus-20240229' : '@cf/qwen/qwen2.5-coder-32b-instruct',
       temperature: 0.2, // Very low for consistent optimization
       maxTokens: 8192,
       systemPrompt: `You are a quantitative strategy optimizer specializing in algorithmic trading.

@@ -52,7 +52,7 @@ export class PerformanceAnalystAgent extends AIAgent implements IPerformanceAgen
   constructor(config: AgentConfig, env?: CloudflareBindings) {
     super(AgentType.PERFORMANCE_ANALYST, {
       ...config,
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
       temperature: 0.2, // Low temperature for consistent analysis
       maxTokens: 2048,
       systemPrompt: `You are a performance analyst AI for a trading system.
@@ -322,8 +322,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
   private async loadDailyMetrics(): Promise<void> {
     // In production, this would load from KV or D1
     // For now, start fresh each day
-    const now = new Date();
-    // const todayKey = `performance:${now.toISOString().split('T')[0]}`; // For future KV storage
+    // const todayKey = `performance:${new Date().toISOString().split('T')[0]}`; // For future KV storage
     
     // Reset metrics at start of day
     this.dailyMetrics = {
@@ -343,8 +342,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
    */
   private async saveDailyMetrics(): Promise<void> {
     // In production, save to KV or D1
-    const now = new Date();
-    const todayKey = `performance:${now.toISOString().split('T')[0]}`;
+    const todayKey = `performance:${new Date().toISOString().split('T')[0]}`;
     
     this.logger.info('Saving daily metrics', {
       key: todayKey,

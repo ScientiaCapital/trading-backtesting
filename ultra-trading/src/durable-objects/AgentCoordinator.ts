@@ -21,8 +21,8 @@ import { StrategyOptimizerAgent } from '@/agents/StrategyOptimizerAgent';
 import { RiskManagerAgent } from '@/agents/RiskManagerAgent';
 import { PerformanceAnalystAgent } from '@/agents/PerformanceAnalystAgent';
 import { ExecutionAgent } from '@/agents/ExecutionAgent';
-import { OptionsFlowAnalyst } from '@/agents/OptionsFlowAnalyst';
-import { MarketHoursResearcher } from '@/agents/MarketHoursResearcher';
+// import { OptionsFlowAnalyst } from '@/agents/OptionsFlowAnalyst'; // Temporarily disabled
+// import { MarketHoursResearcher } from '@/agents/MarketHoursResearcher'; // Temporarily disabled
 import { CloudflareBindings } from '@/types';
 import { FastDecisionService } from '@/services/FastDecisionService';
 import { SmartFastDecisionService } from '@/services/SmartFastDecisionService';
@@ -46,7 +46,7 @@ export class AgentCoordinator {
     
     this.config = {
       maxConcurrentDecisions: 5,
-      decisionTimeout: 5000, // 5 seconds - reduced from 30 seconds for faster trading
+      decisionTimeout: 3000, // 3 seconds - aggressive timeout for fast trading
       consensusThreshold: 0.7
     };
     
@@ -157,21 +157,21 @@ export class AgentCoordinator {
     await executionAgent.initialize();
     this.agents.set(AgentType.EXECUTION, executionAgent);
     
-    // Options Flow Analyst Agent
-    const optionsFlowAnalyst = new OptionsFlowAnalyst(
-      { agentType: AgentType.OPTIONS_FLOW_ANALYST },
-      this.env
-    );
-    await optionsFlowAnalyst.initialize();
-    this.agents.set(AgentType.OPTIONS_FLOW_ANALYST, optionsFlowAnalyst);
+    // Options Flow Analyst Agent - Temporarily disabled
+    // const optionsFlowAnalyst = new OptionsFlowAnalyst(
+    //   { agentType: AgentType.OPTIONS_FLOW_ANALYST },
+    //   this.env
+    // );
+    // await optionsFlowAnalyst.initialize();
+    // this.agents.set(AgentType.OPTIONS_FLOW_ANALYST, optionsFlowAnalyst);
     
     // Market Hours Researcher Agent
-    const marketHoursResearcher = new MarketHoursResearcher(
-      { agentType: AgentType.MARKET_HOURS_RESEARCHER },
-      this.env
-    );
-    await marketHoursResearcher.initialize();
-    this.agents.set(AgentType.MARKET_HOURS_RESEARCHER, marketHoursResearcher);
+    // const marketHoursResearcher = new MarketHoursResearcher(
+    //   { agentType: AgentType.MARKET_HOURS_RESEARCHER },
+    //   this.env
+    // ); // Temporarily disabled
+    // await marketHoursResearcher.initialize();
+    // this.agents.set(AgentType.MARKET_HOURS_RESEARCHER, marketHoursResearcher);
     
     console.log('All AI agents initialized successfully!');
   }
@@ -283,11 +283,8 @@ export class AgentCoordinator {
       priority: MessagePriority.HIGH
     };
     
-    // Process through agents
-    await this.processMessage(marketMessage);
-    
-    // Wait for responses (with timeout)
-    const decision = await this.waitForConsensus(decisionId);
+    // Process through agents and collect responses synchronously
+    const decision = await this.processMessageForDecision(marketMessage, decisionId);
     
     // Store decision
     this.activeDecisions.set(decisionId, decision);
@@ -299,57 +296,84 @@ export class AgentCoordinator {
   }
 
   /**
-   * Wait for agent consensus on a decision
+   * Process message for decision making - synchronous response collection
    */
-  private async waitForConsensus(decisionId: string): Promise<TradingDecision> {
-    const timeout = this.config.decisionTimeout;
+  private async processMessageForDecision(message: AgentMessage, decisionId: string): Promise<TradingDecision> {
     const startTime = Date.now();
+    console.log('Processing message for decision', { messageId: message.id, decisionId });
     
-    // Collect agent responses
-    const responses = new Map<AgentType, any>();
-    
-    while (Date.now() - startTime < timeout) {
-      // Check message queue for relevant responses
-      const relevantMessages = this.messageQueue.filter(
-        msg => msg.type === MessageType.ANALYSIS_RESULT || 
-               msg.type === MessageType.STRATEGY_ADJUSTMENT
-      );
+    try {
+      // Send to all agents and collect responses synchronously
+      const responses = new Map<AgentType, any>();
       
-      for (const msg of relevantMessages) {
-        responses.set(msg.from, msg.payload);
+      if (message.to === 'BROADCAST') {
+        // Send to all agents in parallel and wait for responses
+        const agentPromises = Array.from(this.agents.entries()).map(async ([type, agent]) => {
+          try {
+            const response = await agent.process(message);
+            if (response && response.payload) {
+              responses.set(type, response.payload);
+              console.log(`Agent ${type} responded`, { hasPayload: !!response.payload });
+            }
+            return response;
+          } catch (error) {
+            console.error(`Agent ${type} failed to respond`, { error: (error as Error).message });
+            return null;
+          }
+        });
+        
+        // Wait for all agents to respond (with timeout)
+        await Promise.race([
+          Promise.all(agentPromises),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Agent timeout')), this.config.decisionTimeout)
+          )
+        ]);
+      } else {
+        // Send to specific agent
+        const agent = this.agents.get(message.to as AgentType);
+        if (agent) {
+          const response = await agent.process(message);
+          if (response && response.payload) {
+            responses.set(message.to as AgentType, response.payload);
+          }
+        }
       }
       
-      // Check if we have enough responses (at least 2 agents)
-      if (responses.size >= 2) {
-        console.log(`Consensus reached with ${responses.size} agents in ${Date.now() - startTime}ms`);
-        break;
+      const processingTime = Date.now() - startTime;
+      console.log(`Decision processing completed`, { 
+        responses: responses.size, 
+        time: `${processingTime}ms` 
+      });
+      
+      // If we got responses, build consensus decision
+      if (responses.size > 0) {
+        return this.buildConsensusDecision(decisionId, responses);
       }
       
-      // Check if timeout is approaching - use whatever we have
-      if (Date.now() - startTime > timeout * 0.8 && responses.size > 0) {
-        console.warn(`Timeout approaching, using ${responses.size} agent responses`);
-        break;
-      }
-      
-      // Wait a bit before checking again
-      await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms
-    }
-    
-    // If timeout reached with no responses, return conservative decision
-    if (responses.size === 0) {
-      console.error(`No agent responses received within ${timeout}ms`);
+      // No responses - return conservative decision
       return {
         id: decisionId,
         timestamp: Date.now(),
         action: TradingAction.WAIT,
         signals: [],
         confidence: 0.1,
-        reasoning: 'Timeout - no agent responses received'
+        reasoning: `No agent responses received (${processingTime}ms)`
+      };
+      
+    } catch (error) {
+      console.error('Decision processing failed', { error: (error as Error).message });
+      
+      // Return error decision
+      return {
+        id: decisionId,
+        timestamp: Date.now(),
+        action: TradingAction.WAIT,
+        signals: [],
+        confidence: 0.1,
+        reasoning: `Decision processing error: ${(error as Error).message}`
       };
     }
-    
-    // Build consensus decision
-    return this.buildConsensusDecision(decisionId, responses);
   }
 
   /**
@@ -483,11 +507,12 @@ export class AgentCoordinator {
    * Set up periodic tasks
    */
   private setupPeriodicTasks(): void {
-    // Process message queue every second
+    // Process message queue every second - only for non-decision messages
     setInterval(async () => {
       if (this.messageQueue.length > 0) {
         const message = this.messageQueue.shift();
-        if (message) {
+        if (message && message.type !== MessageType.ANALYSIS_RESULT) {
+          // Only process non-decision messages to avoid circular loops
           await this.processMessage(message);
         }
       }

@@ -61,6 +61,9 @@ export class ExecutionAgent extends BaseAgent {
   constructor(config: AgentConfig, env?: CloudflareBindings) {
     super(AgentType.EXECUTION, {
       ...config,
+      model: '@cf/mistralai/mistral-small-3.1-24b-instruct',
+      temperature: 0.1, // Low temperature for consistent execution decisions
+      maxTokens: 2048,
       systemPrompt: `You are a professional trade execution agent.
         Your role is to execute trades with minimal market impact and slippage.
         Analyze market conditions and choose optimal execution strategies.
@@ -538,7 +541,7 @@ export class ExecutionAgent extends BaseAgent {
   private async cancelAllOrders(): Promise<void> {
     if (!this.tradingService) return;
     
-    for (const [orderId] of this.activeOrders) {
+    for (const orderId of this.activeOrders.keys()) {
       try {
         await this.tradingService.cancelOrder(orderId);
         this.activeOrders.delete(orderId);
