@@ -192,8 +192,6 @@ tradingRoutes.get('/orders', async (c) => {
       direction: c.req.query('direction')
     });
     
-    const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
-    
     // Use AlpacaTradingService which accepts string literals
     const tradingService = new AlpacaTradingService(c.env, c.req.header('X-Tenant-ID') || 'default');
     
@@ -360,6 +358,81 @@ tradingRoutes.get('/options/chains/:symbol', async (c) => {
   } catch (error) {
     logger.error('Failed to get option contracts', { symbol, error: (error as Error).message });
     return c.json(createErrorResponse(createError('OPTIONS_ERROR', 'Failed to retrieve option contracts')), 500);
+  }
+});
+
+/**
+ * Get Market Clock
+ */
+tradingRoutes.get('/clock', async (c) => {
+  const logger = createLogger(c);
+  
+  try {
+    const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
+    const clock = await alpaca.getClock();
+    
+    logger.info('Market clock retrieved', { isOpen: clock.isOpen });
+    return c.json(createApiResponse(clock));
+  } catch (error) {
+    logger.error('Failed to get market clock', { error: (error as Error).message });
+    return c.json(createErrorResponse(createError('CLOCK_ERROR', 'Failed to retrieve market clock')), 500);
+  }
+});
+
+/**
+ * Get Market Hours
+ */
+tradingRoutes.get('/market-hours', async (c) => {
+  const logger = createLogger(c);
+  
+  try {
+    const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
+    const calendar = await alpaca.getCalendar({
+      start: new Date().toISOString().split('T')[0],
+      end: new Date().toISOString().split('T')[0]
+    });
+    
+    logger.info('Market hours retrieved', { date: new Date().toISOString().split('T')[0] });
+    return c.json(createApiResponse(calendar[0] || null));
+  } catch (error) {
+    logger.error('Failed to get market hours', { error: (error as Error).message });
+    return c.json(createErrorResponse(createError('MARKET_HOURS_ERROR', 'Failed to retrieve market hours')), 500);
+  }
+});
+
+/**
+ * Get Trading Status
+ */
+tradingRoutes.get('/status', async (c) => {
+  const logger = createLogger(c);
+  
+  try {
+    // Get account status
+    const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
+    const account = await alpaca.getAccount();
+    const clock = await alpaca.getClock();
+    
+    // Check if trading is enabled (from KV)
+    const tradingEnabled = await c.env.CACHE.get('trading:enabled', 'json') as { enabled: boolean } | null;
+    
+    const status = {
+      tradingEnabled: tradingEnabled?.enabled ?? false,
+      marketOpen: clock.isOpen,
+      accountStatus: account.status,
+      accountBlocked: account.account_blocked,
+      tradingBlocked: account.trading_blocked,
+      patternDayTrader: account.pattern_day_trader,
+      daytradeCount: account.daytrade_count,
+      buyingPower: account.buying_power,
+      cash: account.cash,
+      portfolioValue: account.portfolio_value
+    };
+    
+    logger.info('Trading status retrieved', status);
+    return c.json(createApiResponse(status));
+  } catch (error) {
+    logger.error('Failed to get trading status', { error: (error as Error).message });
+    return c.json(createErrorResponse(createError('STATUS_ERROR', 'Failed to retrieve trading status')), 500);
   }
 });
 

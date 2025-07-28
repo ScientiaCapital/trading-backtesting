@@ -102,34 +102,47 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
       let response: GeminiAnalysisResponse;
       
       if (this.useGeminiAPI && this.env?.GOOGLE_API_KEY) {
-        // Use Google Gemini API
-        const apiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': this.env.GOOGLE_API_KEY
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              temperature: this.config.temperature,
-              maxOutputTokens: this.config.maxTokens,
-              candidateCount: 1
-            }
-          })
-        });
+        // Use Google Gemini API with timeout
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
+        try {
+          const apiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': this.env.GOOGLE_API_KEY
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: prompt
+                }]
+              }],
+              generationConfig: {
+                temperature: this.config.temperature,
+                maxOutputTokens: this.config.maxTokens,
+                candidateCount: 1
+              }
+            }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeout);
 
         if (!apiResponse.ok) {
           throw new Error(`Gemini API error: ${apiResponse.status}`);
         }
 
-        const data = await apiResponse.json() as any;
-        const responseText = data.candidates[0].content.parts[0].text;
-        response = JSON.parse(responseText) as GeminiAnalysisResponse;
+          const data = await apiResponse.json() as any;
+          const responseText = data.candidates[0].content.parts[0].text;
+          response = JSON.parse(responseText) as GeminiAnalysisResponse;
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            throw new Error('Gemini API timeout after 3 seconds');
+          }
+          throw error;
+        }
         
       } else if (this.env?.AI) {
         // Use Cloudflare Workers AI

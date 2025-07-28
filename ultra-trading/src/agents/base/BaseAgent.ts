@@ -200,6 +200,7 @@ export abstract class BaseAgent implements IAgent {
 export abstract class AIAgent extends BaseAgent {
   protected modelEndpoint?: string;
   protected apiKey?: string;
+  protected readonly AI_TIMEOUT = 3000; // 3 second timeout for AI calls
   
   constructor(type: AgentType, config: AgentConfig) {
     super(type, config);

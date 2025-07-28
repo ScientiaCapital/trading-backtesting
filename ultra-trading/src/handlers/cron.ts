@@ -73,7 +73,7 @@ export class CronHandler {
    * Handle market open (9:30 AM ET)
    */
   private async handleMarketOpen(): Promise<void> {
-    console.log('Market open handler started');
+    console.log('Market open handler started - OBSERVATION MODE');
 
     // Check if trading is enabled
     const isTradingEnabled = await this.isTradingEnabled();
@@ -95,22 +95,39 @@ export class CronHandler {
       return;
     }
 
-    // Initialize trading pipeline
+    // Store market open time and observation mode status
+    await this.env.CACHE.put('trading:mode', JSON.stringify({
+      mode: 'observation',
+      startTime: new Date().toISOString(),
+      observationEndTime: '11:00 AM ET',
+      message: 'Observing market conditions until 11:00 AM ET'
+    }), {
+      expirationTtl: 24 * 60 * 60 // 24 hours
+    });
+
+    // Initialize trading pipeline in observation mode
     this.pipeline = new TradingPipeline(this.env, {
       dailyProfitTarget: 300,
       dailyLossLimit: 300,
-      maxConcurrentTrades: 5
+      maxConcurrentTrades: 5,
+      tradingHours: {
+        start: '11:00', // Start actual trading at 11 AM
+        end: '16:00'
+      }
     });
 
-    // Start automated trading
-    await this.pipeline.start();
-    
-    console.log('Automated trading started for the day');
+    // Start in observation mode (no actual trades)
+    console.log('Starting market observation mode until 11:00 AM ET');
     
     // Send notification
     await this.sendNotification({
-      type: 'TRADING_STARTED',
-      message: 'Automated trading has started for the day',
+      type: 'OBSERVATION_MODE_STARTED',
+      message: 'Market observation mode active. Will analyze entry/exit opportunities until 11:00 AM ET',
+      data: {
+        observationStart: '9:30 AM ET',
+        observationEnd: '11:00 AM ET',
+        tradingStart: '11:00 AM ET'
+      },
       timestamp: new Date().toISOString()
     });
   }
@@ -121,6 +138,40 @@ export class CronHandler {
   private async handleHourlyCheck(): Promise<void> {
     console.log('Hourly check handler started');
 
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check current mode
+    const tradingMode = await this.env.CACHE.get('trading:mode', 'json') as any;
+    
+    // If it's 11 AM and we're still in observation mode, switch to trading
+    if (currentHour === 11 && tradingMode?.mode === 'observation') {
+      console.log('Transitioning from observation to trading mode at 11 AM');
+      
+      // Update mode
+      await this.env.CACHE.put('trading:mode', JSON.stringify({
+        mode: 'trading',
+        startTime: new Date().toISOString(),
+        message: 'Active trading mode - executing trades based on signals'
+      }), {
+        expirationTtl: 24 * 60 * 60
+      });
+      
+      // Start the trading pipeline if not already running
+      if (this.pipeline && !this.pipeline.getStatus().isRunning) {
+        await this.pipeline.start();
+      }
+      
+      await this.sendNotification({
+        type: 'TRADING_MODE_ACTIVATED',
+        message: 'Transitioning to active trading mode. Market has settled, beginning trade execution.',
+        data: {
+          observationComplete: true,
+          tradingStartTime: new Date().toISOString()
+        }
+      });
+    }
+
     if (!this.pipeline) {
       console.log('Trading pipeline not active');
       return;
@@ -128,6 +179,22 @@ export class CronHandler {
 
     // Get current status
     const status = this.pipeline.getStatus();
+    
+    // During observation mode, just log what we're seeing
+    if (tradingMode?.mode === 'observation') {
+      console.log('Observation mode - analyzing market conditions', {
+        currentHour: `${currentHour}:00`,
+        observationEndTime: '11:00',
+        marketData: 'Collecting...'
+      });
+      
+      await this.storePerformanceSnapshot({
+        timestamp: new Date().toISOString(),
+        mode: 'observation',
+        ...status
+      });
+      return;
+    }
     
     if (!status.isRunning) {
       console.log('Trading is not running');
@@ -145,12 +212,13 @@ export class CronHandler {
     // Store hourly snapshot
     await this.storePerformanceSnapshot({
       timestamp: new Date().toISOString(),
+      mode: 'trading',
       ...status
     });
 
-    // Check if we're on track
-    const hoursIntoTrading = new Date().getHours() - 9.5; // 9:30 AM start
-    const expectedProgress = (hoursIntoTrading / 6.5) * 300; // 6.5 trading hours
+    // Check if we're on track (adjusted for 11 AM start)
+    const hoursIntoTrading = currentHour - 11; // 11 AM start
+    const expectedProgress = (hoursIntoTrading / 5) * 300; // 5 trading hours (11 AM - 4 PM)
     
     if (status.dailyPnL < expectedProgress * 0.5) {
       console.log('Trading performance below expectations', {

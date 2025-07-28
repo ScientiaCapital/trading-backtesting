@@ -21,7 +21,11 @@ import { StrategyOptimizerAgent } from '@/agents/StrategyOptimizerAgent';
 import { RiskManagerAgent } from '@/agents/RiskManagerAgent';
 import { PerformanceAnalystAgent } from '@/agents/PerformanceAnalystAgent';
 import { ExecutionAgent } from '@/agents/ExecutionAgent';
+import { OptionsFlowAnalyst } from '@/agents/OptionsFlowAnalyst';
+import { MarketHoursResearcher } from '@/agents/MarketHoursResearcher';
 import { CloudflareBindings } from '@/types';
+import { FastDecisionService } from '@/services/FastDecisionService';
+import { SmartFastDecisionService } from '@/services/SmartFastDecisionService';
 
 export class AgentCoordinator {
   private state: DurableObjectState;
@@ -32,6 +36,8 @@ export class AgentCoordinator {
   private messageQueue: AgentMessage[] = [];
   private activeDecisions: Map<string, TradingDecision> = new Map();
   private config: CoordinatorConfig;
+  private fastDecisionService: FastDecisionService;
+  private smartFastDecisionService: SmartFastDecisionService;
   
   constructor(state: DurableObjectState, env: CloudflareBindings) {
     this.state = state;
@@ -40,9 +46,13 @@ export class AgentCoordinator {
     
     this.config = {
       maxConcurrentDecisions: 5,
-      decisionTimeout: 30000, // 30 seconds
+      decisionTimeout: 5000, // 5 seconds - reduced from 30 seconds for faster trading
       consensusThreshold: 0.7
     };
+    
+    // Initialize fast decision services
+    this.fastDecisionService = new FastDecisionService(env);
+    this.smartFastDecisionService = new SmartFastDecisionService(env);
     
     // Initialize coordinator on first request
     this.state.blockConcurrencyWhile(async () => {
@@ -147,6 +157,22 @@ export class AgentCoordinator {
     await executionAgent.initialize();
     this.agents.set(AgentType.EXECUTION, executionAgent);
     
+    // Options Flow Analyst Agent
+    const optionsFlowAnalyst = new OptionsFlowAnalyst(
+      { agentType: AgentType.OPTIONS_FLOW_ANALYST },
+      this.env
+    );
+    await optionsFlowAnalyst.initialize();
+    this.agents.set(AgentType.OPTIONS_FLOW_ANALYST, optionsFlowAnalyst);
+    
+    // Market Hours Researcher Agent
+    const marketHoursResearcher = new MarketHoursResearcher(
+      { agentType: AgentType.MARKET_HOURS_RESEARCHER },
+      this.env
+    );
+    await marketHoursResearcher.initialize();
+    this.agents.set(AgentType.MARKET_HOURS_RESEARCHER, marketHoursResearcher);
+    
     console.log('All AI agents initialized successfully!');
   }
 
@@ -206,11 +232,47 @@ export class AgentCoordinator {
    * Make a trading decision
    */
   private async makeDecision(request: Request): Promise<Response> {
-    const { context } = await request.json() as { context: any };
+    const { context, useQuickDecision = true } = await request.json() as { 
+      context: any; 
+      useQuickDecision?: boolean;
+    };
     
     const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create market update message
+    // Try smart fast decision first if enabled (for time-critical trades with proper risk management)
+    if (useQuickDecision && context.marketData && context.positions && context.dailyPnL !== undefined) {
+      try {
+        // Use SmartFastDecisionService for better decision quality
+        const accountValue = context.account?.portfolio_value || 100000;
+        const smartDecision = await this.smartFastDecisionService.getQuickDecision(
+          context.marketData,
+          context.positions,
+          context.dailyPnL,
+          accountValue
+        );
+        
+        // Log decision details for monitoring
+        const decisionTime = Date.now() - parseInt(decisionId.split('-')[1] || '0');
+        console.log(`Smart fast decision made in ${decisionTime}ms`, {
+          action: smartDecision.action,
+          confidence: smartDecision.confidence,
+          reasoning: smartDecision.reasoning,
+          metadata: smartDecision.metadata
+        });
+        
+        // Always use smart decision (it has built-in validation)
+        this.activeDecisions.set(decisionId, smartDecision);
+        
+        return new Response(
+          JSON.stringify(smartDecision),
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        console.error('Smart fast decision failed, falling back to AI agents:', error);
+      }
+    }
+    
+    // Fall back to AI agent consensus for complex decisions
     const marketMessage: AgentMessage = {
       id: `msg-${decisionId}`,
       from: AgentType.MARKET_ANALYST,
@@ -257,13 +319,33 @@ export class AgentCoordinator {
         responses.set(msg.from, msg.payload);
       }
       
-      // Check if we have enough responses
+      // Check if we have enough responses (at least 2 agents)
       if (responses.size >= 2) {
+        console.log(`Consensus reached with ${responses.size} agents in ${Date.now() - startTime}ms`);
+        break;
+      }
+      
+      // Check if timeout is approaching - use whatever we have
+      if (Date.now() - startTime > timeout * 0.8 && responses.size > 0) {
+        console.warn(`Timeout approaching, using ${responses.size} agent responses`);
         break;
       }
       
       // Wait a bit before checking again
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms
+    }
+    
+    // If timeout reached with no responses, return conservative decision
+    if (responses.size === 0) {
+      console.error(`No agent responses received within ${timeout}ms`);
+      return {
+        id: decisionId,
+        timestamp: Date.now(),
+        action: TradingAction.WAIT,
+        signals: [],
+        confidence: 0.1,
+        reasoning: 'Timeout - no agent responses received'
+      };
     }
     
     // Build consensus decision
@@ -410,6 +492,20 @@ export class AgentCoordinator {
         }
       }
     }, 1000);
+    
+    // Pre-compute indicators for fast decisions every 30 seconds
+    setInterval(async () => {
+      try {
+        const symbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA']; // Main trading symbols
+        for (const symbol of symbols) {
+          // Pre-compute for both services
+          await this.fastDecisionService.precomputeIndicators(symbol);
+          // SmartFastDecisionService doesn't need pre-computation as it analyzes in real-time
+        }
+      } catch (error) {
+        console.error('Failed to pre-compute indicators:', error);
+      }
+    }, 30000);
     
     // Clean up old decisions every minute
     setInterval(() => {

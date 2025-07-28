@@ -31,7 +31,7 @@ app.get('/status', async (c) => {
       error: {
         code: 'REALTIME_STATUS_ERROR',
         message: 'Failed to get real-time status',
-        details: { error: error.message }
+        details: { error: error instanceof Error ? error.message : String(error) }
       }
     }, 500);
   }
@@ -77,7 +77,7 @@ app.post('/broadcast', async (c) => {
       error: {
         code: 'BROADCAST_ERROR',
         message: 'Failed to broadcast message',
-        details: { error: error.message }
+        details: { error: error instanceof Error ? error.message : String(error) }
       }
     }, 500);
   }
@@ -185,7 +185,7 @@ app.post('/test', async (c) => {
       error: {
         code: 'TEST_ERROR',
         message: 'Failed to send test notifications',
-        details: { error: error.message }
+        details: { error: error instanceof Error ? error.message : String(error) }
       }
     }, 500);
   }

@@ -14,7 +14,13 @@ export enum AgentType {
   STRATEGY_OPTIMIZER = 'STRATEGY_OPTIMIZER',
   EXECUTION = 'EXECUTION',
   RISK_MANAGER = 'RISK_MANAGER',
-  PERFORMANCE_ANALYST = 'PERFORMANCE_ANALYST'
+  PERFORMANCE_ANALYST = 'PERFORMANCE_ANALYST',
+  OPTIONS_FLOW_ANALYST = 'OPTIONS_FLOW_ANALYST',
+  CRYPTO_SCALPER = 'CRYPTO_SCALPER',
+  MOMENTUM_SCANNER = 'MOMENTUM_SCANNER',
+  OPENING_RANGE = 'OPENING_RANGE',
+  MARKET_HOURS_RESEARCHER = 'MARKET_HOURS_RESEARCHER',
+  AFTER_HOURS_RESEARCHER = 'AFTER_HOURS_RESEARCHER'
 }
 
 export enum AgentStatus {
@@ -201,9 +207,14 @@ export interface TradingDecision {
   action: TradingAction;
   signals: Signal[];
   confidence: number;
-  reasoning: string;
-  riskAssessment: RiskAssessment;
-  expectedOutcome: ExpectedOutcome;
+  reasoning?: string;
+  riskAssessment?: RiskAssessment;
+  expectedOutcome?: ExpectedOutcome;
+  quantity?: number;
+  symbol?: string;
+  stopLoss?: number;
+  takeProfit?: number;
+  metadata?: Record<string, any>;
 }
 
 export enum TradingAction {

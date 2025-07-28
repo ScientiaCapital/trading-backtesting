@@ -48,7 +48,25 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
   private readonly MAX_POSITION_RISK = 0.01; // 1% max per position
   private readonly MAX_CORRELATION_RISK = 0.7; // 70% correlation threshold
   private readonly MAX_DRAWDOWN_LIMIT = 0.05; // 5% max drawdown
-  private readonly DAILY_LOSS_LIMIT = 300; // $300 daily loss limit
+  private readonly DAILY_LOSS_LIMIT = 500; // $500 daily loss limit (increased from $300)
+  private readonly DAILY_PROFIT_TARGET = 300; // $300 daily profit target
+  
+  // Live Strategy Tuner properties
+  private tradeHistory: Array<{
+    symbol: string;
+    action: string;
+    pnl: number;
+    timestamp: Date;
+  }> = [];
+  private consecutiveLosses = 0;
+  private morningVolatility = 0;
+  private currentMarketRegime: 'momentum' | 'mean_reversion' = 'momentum';
+  private strategyPaused = false;
+  private pausedUntil?: Date;
+  private winRate = 0;
+  private avgWin = 0;
+  private avgLoss = 0;
+  private dynamicPositionMultiplier = 1.0;
   
   constructor(config: AgentConfig, env?: CloudflareBindings) {
     super(AgentType.RISK_MANAGER, {
@@ -430,6 +448,292 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
         action: 'Do not trade until system is verified'
       }],
       recommendation: RiskRecommendation.STOP_TRADING
+    };
+  }
+
+  // ========== Live Strategy Tuner Methods ==========
+
+  /**
+   * Monitor real-time trade performance
+   */
+  async monitorTradePerformance(
+    symbol: string,
+    action: string,
+    entryPrice: number,
+    exitPrice: number,
+    quantity: number
+  ): Promise<void> {
+    const pnl = action === 'BUY' ? 
+      (exitPrice - entryPrice) * quantity : 
+      (entryPrice - exitPrice) * quantity;
+
+    // Record trade
+    this.tradeHistory.push({
+      symbol,
+      action,
+      pnl,
+      timestamp: new Date()
+    });
+
+    // Update consecutive losses
+    if (pnl < 0) {
+      this.consecutiveLosses++;
+      
+      // Pause strategy after 3 consecutive losses
+      if (this.consecutiveLosses >= 3) {
+        this.pauseFailingStrategies();
+      }
+    } else {
+      this.consecutiveLosses = 0;
+    }
+
+    // Update win rate metrics
+    this.updateWinRateMetrics();
+    
+    // Log performance
+    this.logger.info('Trade performance recorded', {
+      symbol,
+      pnl,
+      consecutiveLosses: this.consecutiveLosses,
+      winRate: this.winRate
+    });
+  }
+
+  /**
+   * Adjust position sizes based on morning volatility
+   */
+  async adjustPositionSizes(volatility: number): Promise<number> {
+    this.morningVolatility = volatility;
+    
+    // High volatility (>2%) - reduce position sizes by 50%
+    if (volatility > 0.02) {
+      this.dynamicPositionMultiplier = 0.5;
+      this.logger.warn('High volatility detected - reducing position sizes', {
+        volatility: (volatility * 100).toFixed(2) + '%',
+        multiplier: this.dynamicPositionMultiplier
+      });
+    }
+    // Normal volatility (1-2%) - normal position sizes
+    else if (volatility > 0.01) {
+      this.dynamicPositionMultiplier = 1.0;
+    }
+    // Low volatility (<1%) - can increase position sizes by 20%
+    else {
+      this.dynamicPositionMultiplier = 1.2;
+      this.logger.info('Low volatility - increasing position sizes', {
+        volatility: (volatility * 100).toFixed(2) + '%',
+        multiplier: this.dynamicPositionMultiplier
+      });
+    }
+
+    // Broadcast position size adjustment
+    await this.sendMessage(
+      this.createMessage(
+        'BROADCAST',
+        MessageType.STRATEGY_ADJUSTMENT,
+        {
+          type: 'position_size',
+          multiplier: this.dynamicPositionMultiplier,
+          reason: `Volatility-based adjustment (${(volatility * 100).toFixed(2)}%)`
+        },
+        MessagePriority.HIGH
+      )
+    );
+
+    return this.dynamicPositionMultiplier;
+  }
+
+  /**
+   * Switch between momentum and mean reversion based on market regime
+   */
+  async switchMarketRegime(marketData: any): Promise<void> {
+    const previousRegime = this.currentMarketRegime;
+    
+    // Simple regime detection based on recent price action
+    const { trendStrength, volatility, volume } = marketData;
+    
+    // Strong trend with normal volatility = momentum
+    if (trendStrength > 0.7 && volatility < 0.02) {
+      this.currentMarketRegime = 'momentum';
+    }
+    // Low trend strength with higher volatility = mean reversion
+    else if (trendStrength < 0.3 && volatility > 0.015) {
+      this.currentMarketRegime = 'mean_reversion';
+    }
+
+    // Notify if regime changed
+    if (previousRegime !== this.currentMarketRegime) {
+      this.logger.info('Market regime switched', {
+        from: previousRegime,
+        to: this.currentMarketRegime
+      });
+
+      await this.sendMessage(
+        this.createMessage(
+          'BROADCAST',
+          MessageType.STRATEGY_ADJUSTMENT,
+          {
+            type: 'market_regime',
+            regime: this.currentMarketRegime,
+            reason: `Trend: ${trendStrength.toFixed(2)}, Vol: ${(volatility * 100).toFixed(2)}%`
+          },
+          MessagePriority.HIGH
+        )
+      );
+    }
+  }
+
+  /**
+   * Pause failing strategies
+   */
+  private pauseFailingStrategies(): void {
+    this.strategyPaused = true;
+    this.pausedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    
+    this.logger.warn('Strategy paused due to consecutive losses', {
+      consecutiveLosses: this.consecutiveLosses,
+      pausedUntil: this.pausedUntil
+    });
+
+    // Send critical alert
+    this.sendMessage(
+      this.createMessage(
+        'BROADCAST',
+        MessageType.STOP_TRADING,
+        {
+          reason: '3 consecutive losses - pausing for 30 minutes',
+          resumeAt: this.pausedUntil
+        },
+        MessagePriority.CRITICAL
+      )
+    );
+  }
+
+  /**
+   * Update take profit levels based on current ATR
+   */
+  async updateTakeProfitLevels(atr: number): Promise<void> {
+    // Dynamic take profit based on ATR
+    const baseTakeProfit = atr * 2; // 2x ATR
+    
+    // Adjust based on win rate
+    let takeProfitMultiplier = 1.0;
+    if (this.winRate < 0.4) {
+      // Low win rate - take profits quicker
+      takeProfitMultiplier = 0.8;
+    } else if (this.winRate > 0.6) {
+      // High win rate - let winners run
+      takeProfitMultiplier = 1.2;
+    }
+
+    const adjustedTakeProfit = baseTakeProfit * takeProfitMultiplier;
+
+    await this.sendMessage(
+      this.createMessage(
+        AgentType.EXECUTION,
+        MessageType.STRATEGY_ADJUSTMENT,
+        {
+          type: 'take_profit',
+          atr,
+          baseTarget: baseTakeProfit,
+          adjustedTarget: adjustedTakeProfit,
+          winRate: this.winRate
+        }
+      )
+    );
+  }
+
+  /**
+   * Get dynamic position size based on current conditions
+   */
+  getDynamicPositionSize(baseSize: number): number {
+    // Check if strategy is paused
+    if (this.strategyPaused && this.pausedUntil && new Date() < this.pausedUntil) {
+      return 0; // No new positions while paused
+    }
+
+    // Resume if pause period expired
+    if (this.strategyPaused && this.pausedUntil && new Date() >= this.pausedUntil) {
+      this.strategyPaused = false;
+      this.consecutiveLosses = 0;
+      this.logger.info('Strategy resumed after pause period');
+    }
+
+    return Math.floor(baseSize * this.dynamicPositionMultiplier);
+  }
+
+  /**
+   * Check if approaching daily profit target
+   */
+  async checkDailyTargetApproach(dailyPnL: number): Promise<void> {
+    const targetProgress = dailyPnL / this.DAILY_PROFIT_TARGET;
+    
+    if (targetProgress >= 0.8 && targetProgress < 1.0) {
+      // Approaching target - reduce risk
+      this.dynamicPositionMultiplier = 0.7;
+      
+      await this.sendMessage(
+        this.createMessage(
+          'BROADCAST',
+          MessageType.RISK_ALERT,
+          {
+            level: 'INFO',
+            message: `Approaching daily target: $${dailyPnL.toFixed(2)} / $${this.DAILY_PROFIT_TARGET}`,
+            action: 'Reducing position sizes to protect profits'
+          }
+        )
+      );
+    } else if (targetProgress >= 1.0) {
+      // Target reached - consider stopping
+      await this.sendMessage(
+        this.createMessage(
+          'BROADCAST',
+          MessageType.RISK_ALERT,
+          {
+            level: 'INFO',
+            message: `Daily profit target reached: $${dailyPnL.toFixed(2)}`,
+            action: 'Consider stopping trading to lock in profits'
+          },
+          MessagePriority.HIGH
+        )
+      );
+    }
+  }
+
+  /**
+   * Update win rate metrics
+   */
+  private updateWinRateMetrics(): void {
+    const recentTrades = this.tradeHistory.slice(-20); // Last 20 trades
+    
+    if (recentTrades.length === 0) return;
+
+    const wins = recentTrades.filter(t => t.pnl > 0);
+    const losses = recentTrades.filter(t => t.pnl < 0);
+    
+    this.winRate = wins.length / recentTrades.length;
+    this.avgWin = wins.length > 0 ? 
+      wins.reduce((sum, t) => sum + t.pnl, 0) / wins.length : 0;
+    this.avgLoss = losses.length > 0 ? 
+      losses.reduce((sum, t) => sum + t.pnl, 0) / losses.length : 0;
+  }
+
+  /**
+   * Get current strategy status
+   */
+  getStrategyStatus(): {
+    regime: string;
+    paused: boolean;
+    positionMultiplier: number;
+    winRate: number;
+    consecutiveLosses: number;
+  } {
+    return {
+      regime: this.currentMarketRegime,
+      paused: this.strategyPaused,
+      positionMultiplier: this.dynamicPositionMultiplier,
+      winRate: this.winRate,
+      consecutiveLosses: this.consecutiveLosses
     };
   }
 }

@@ -516,7 +516,7 @@ export class AlpacaClient {
     return {
       async getLatestQuote(symbol: string): Promise<{ symbol: string; bid_price: number; ask_price: number; bid_size: number; ask_size: number; timestamp: string }> {
         const response = await self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
-        const {quote} = response;
+        const quote = response.quote as any;
         return {
           symbol,
           bid_price: quote.bp,

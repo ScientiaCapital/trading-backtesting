@@ -424,6 +424,16 @@ import { tradingRoutes } from './trading';
 import realtimeRoutes from './realtime';
 
 /**
+ * Agent Routes - Import
+ */
+import { agentRoutes } from './agents';
+
+/**
+ * Market Time Routes - Import
+ */
+import { marketTimeRoutes } from './market-time';
+
+/**
  * Root API Router
  * Combines all route modules
  */
@@ -439,6 +449,8 @@ export const createApiRouter = (): Hono<ApiContext> => {
   api.route('/ai', aiRoutes);
   api.route('/trading', tradingRoutes);
   api.route('/realtime', realtimeRoutes);
+  api.route('/agents', agentRoutes);
+  api.route('/market-time', marketTimeRoutes);
   
   return api;
 };

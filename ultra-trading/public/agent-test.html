@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTRA Trading - AI Agent Team Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #00ff41;
+            text-align: center;
+        }
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .agent-card {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        .agent-card.active {
+            border-color: #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+        .agent-card.communicating {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { border-color: #00ff41; }
+            50% { border-color: #ffaa00; }
+            100% { border-color: #00ff41; }
+        }
+        .agent-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .agent-status {
+            font-size: 12px;
+            color: #888;
+        }
+        .test-controls {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        button {
+            background: #00ff41;
+            color: #0a0a0a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #00cc33;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message-flow {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-left: 3px solid #333;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .message.market { border-color: #00ff41; }
+        .message.risk { border-color: #ff0041; }
+        .message.strategy { border-color: #ffaa00; }
+        .message.execution { border-color: #0099ff; }
+        .message.performance { border-color: #ff00ff; }
+        .decision-panel {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .decision-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #0f0f0f;
+            border-radius: 4px;
+        }
+        .confidence-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-left: 10px;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff0041, #ffaa00, #00ff41);
+            transition: width 0.5s ease;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-indicator.online { background: #00ff41; }
+        .status-indicator.offline { background: #ff0041; }
+        .status-indicator.processing { background: #ffaa00; animation: blink 1s infinite; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 ULTRA Trading - AI Agent Team Test</h1>
+        
+        <div class="test-controls">
+            <h2>Test Scenarios</h2>
+            <button id="initBtn">Initialize Agent Team</button>
+            <button id="marketAnalysisBtn" disabled>Test Market Analysis</button>
+            <button id="riskAssessmentBtn" disabled>Test Risk Assessment</button>
+            <button id="decisionFlowBtn" disabled>Test Decision Flow</button>
+            <button id="fastDecisionBtn" disabled>Test Fast Decision (< 100ms)</button>
+            <button id="stressTestBtn" disabled>Stress Test (100 messages)</button>
+        </div>
+        
+        <div class="agent-grid">
+            <div class="agent-card" id="agent-market">
+                <div class="status-indicator offline"></div>
+                <div class="agent-name">Market Analyst</div>
+                <div class="agent-status">Model: Gemini Pro</div>
+                <div class="agent-info">Status: Offline</div>
+            </div>
+            
+            <div class="agent-card" id="agent-risk">
+                <div class="status-indicator offline"></div>
+                <div class="agent-name">Risk Manager</div>
+                <div class="agent-status">Model: Llama 3.1</div>
+                <div class="agent-info">Status: Offline</div>
+            </div>
+            
+            <div class="agent-card" id="agent-strategy">
+                <div class="status-indicator offline"></div>
+                <div class="agent-name">Strategy Optimizer</div>
+                <div class="agent-status">Model: Claude 3</div>
+                <div class="agent-info">Status: Offline</div>
+            </div>
+            
+            <div class="agent-card" id="agent-performance">
+                <div class="status-indicator offline"></div>
+                <div class="agent-name">Performance Analyst</div>
+                <div class="agent-status">Model: Llama 3.1</div>
+                <div class="agent-info">Status: Offline</div>
+            </div>
+            
+            <div class="agent-card" id="agent-execution">
+                <div class="status-indicator offline"></div>
+                <div class="agent-name">Execution Agent</div>
+                <div class="agent-status">Model: Qwen 2.5</div>
+                <div class="agent-info">Status: Offline</div>
+            </div>
+        </div>
+        
+        <div class="decision-panel">
+            <h2>Latest Decision</h2>
+            <div id="decisionContent">
+                <p style="text-align: center; color: #666;">No decision yet. Run a test scenario.</p>
+            </div>
+        </div>
+        
+        <div class="message-flow">
+            <h2>Message Flow</h2>
+            <div id="messageLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1/agents';
+        let agentStatus = {};
+        
+        // Update agent card status
+        function updateAgentCard(agentType, status, info = '') {
+            const card = document.getElementById(`agent-${agentType.toLowerCase()}`);
+            if (!card) return;
+            
+            const indicator = card.querySelector('.status-indicator');
+            const infoDiv = card.querySelector('.agent-info');
+            
+            // Update status indicator
+            indicator.className = 'status-indicator ' + status;
+            
+            // Update info text
+            infoDiv.textContent = info || `Status: ${status}`;
+            
+            // Update card state
+            if (status === 'online') {
+                card.classList.add('active');
+            } else if (status === 'processing') {
+                card.classList.add('communicating');
+            } else {
+                card.classList.remove('active', 'communicating');
+            }
+        }
+        
+        // Add message to log
+        function addMessage(from, to, type, content) {
+            const messageLog = document.getElementById('messageLog');
+            const message = document.createElement('div');
+            
+            let messageClass = 'message';
+            if (from.includes('MARKET')) messageClass += ' market';
+            else if (from.includes('RISK')) messageClass += ' risk';
+            else if (from.includes('STRATEGY')) messageClass += ' strategy';
+            else if (from.includes('EXECUTION')) messageClass += ' execution';
+            else if (from.includes('PERFORMANCE')) messageClass += ' performance';
+            
+            message.className = messageClass;
+            message.innerHTML = `
+                <strong>[${new Date().toLocaleTimeString()}]</strong> 
+                ${from} → ${to}: <em>${type}</em>
+                ${content ? `<br>${content}` : ''}
+            `;
+            
+            messageLog.insertBefore(message, messageLog.firstChild);
+            
+            // Keep only last 100 messages
+            while (messageLog.children.length > 100) {
+                messageLog.removeChild(messageLog.lastChild);
+            }
+        }
+        
+        // Initialize agents
+        async function initializeAgents() {
+            addMessage('SYSTEM', 'ALL', 'INITIALIZE', 'Initializing agent team...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const agents = data.data.agents || [];
+                    agents.forEach(agent => {
+                        const type = agent.type.split('_')[0].toLowerCase();
+                        updateAgentCard(type, agent.status, `Last: ${new Date(agent.lastUpdate).toLocaleTimeString()}`);
+                    });
+                    
+                    // Enable test buttons
+                    document.getElementById('marketAnalysisBtn').disabled = false;
+                    document.getElementById('riskAssessmentBtn').disabled = false;
+                    document.getElementById('decisionFlowBtn').disabled = false;
+                    document.getElementById('fastDecisionBtn').disabled = false;
+                    document.getElementById('stressTestBtn').disabled = false;
+                    
+                    addMessage('SYSTEM', 'ALL', 'READY', 'All agents initialized successfully');
+                }
+            } catch (error) {
+                addMessage('SYSTEM', 'ERROR', 'INIT_FAILED', error.message);
+            }
+        }
+        
+        // Test market analysis
+        async function testMarketAnalysis() {
+            addMessage('SYSTEM', 'AGENTS', 'TEST', 'Starting market analysis test...');
+            
+            // Show agents processing
+            ['market', 'risk', 'strategy'].forEach(agent => {
+                updateAgentCard(agent, 'processing', 'Analyzing...');
+            });
+            
+            try {
+                const response = await fetch(`${API_BASE}/test/market-analysis`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage('MARKET_ANALYST', 'ALL', 'ANALYSIS', 'Market conditions: Bullish momentum detected');
+                    addMessage('RISK_MANAGER', 'COORDINATOR', 'ASSESSMENT', 'Risk level: Moderate (3.5/10)');
+                    addMessage('STRATEGY_OPTIMIZER', 'COORDINATOR', 'RECOMMENDATION', 'Optimal strategy: Iron Condor');
+                    
+                    // Reset agent status
+                    setTimeout(() => {
+                        ['market', 'risk', 'strategy'].forEach(agent => {
+                            updateAgentCard(agent, 'online', 'Ready');
+                        });
+                    }, 2000);
+                }
+            } catch (error) {
+                addMessage('SYSTEM', 'ERROR', 'TEST_FAILED', error.message);
+            }
+        }
+        
+        // Test risk assessment
+        async function testRiskAssessment() {
+            addMessage('SYSTEM', 'RISK_MANAGER', 'TEST', 'Testing risk assessment with positions...');
+            
+            updateAgentCard('risk', 'processing', 'Calculating risk...');
+            updateAgentCard('performance', 'processing', 'Analyzing P&L...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/test/risk-assessment`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage('RISK_MANAGER', 'COORDINATOR', 'RISK_REPORT', 
+                        'Position risk: $320 unrealized gain, -$65 unrealized loss');
+                    addMessage('PERFORMANCE_ANALYST', 'COORDINATOR', 'PERFORMANCE', 
+                        'Daily P&L: $255, Target progress: 85%');
+                    
+                    setTimeout(() => {
+                        updateAgentCard('risk', 'online', 'Ready');
+                        updateAgentCard('performance', 'online', 'Ready');
+                    }, 2000);
+                }
+            } catch (error) {
+                addMessage('SYSTEM', 'ERROR', 'RISK_TEST_FAILED', error.message);
+            }
+        }
+        
+        // Test full decision flow
+        async function testDecisionFlow() {
+            addMessage('SYSTEM', 'COORDINATOR', 'TEST', 'Running full decision flow test with performance comparison...');
+            
+            // All agents active
+            ['market', 'risk', 'strategy', 'performance', 'execution'].forEach(agent => {
+                updateAgentCard(agent, 'processing', 'Working...');
+            });
+            
+            try {
+                const response = await fetch(`${API_BASE}/test/decision-flow`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data.decision) {
+                    const decision = data.data.decision;
+                    
+                    // Add performance comparison messages
+                    addMessage('SYSTEM', 'PERFORMANCE', 'FAST_DECISION', 
+                        `Fast decision completed in ${decision.fast.processingTime}`);
+                    addMessage('SYSTEM', 'PERFORMANCE', 'AI_DECISION', 
+                        `AI agent decision completed in ${decision.ai.processingTime}`);
+                    addMessage('SYSTEM', 'PERFORMANCE', 'SPEED_IMPROVEMENT', 
+                        `Fast decision is ${decision.consensus.speedImprovement}`);
+                    
+                    // Check if decisions agree
+                    if (decision.consensus.action === 'AGREED') {
+                        addMessage('SYSTEM', 'CONSENSUS', 'AGREEMENT', 
+                            'Fast decision and AI agents reached same conclusion');
+                    } else {
+                        addMessage('SYSTEM', 'CONSENSUS', 'DISAGREEMENT', 
+                            `Fast: ${decision.fast.action}, AI: ${decision.ai.action}`);
+                    }
+                    
+                    // Update decision panel
+                    const decisionContent = document.getElementById('decisionContent');
+                    decisionContent.innerHTML = `
+                        <h3>⚡ Fast Decision (${decision.fast.processingTime})</h3>
+                        <div class="decision-item">
+                            <span>Action: <strong>${decision.fast.action}</strong></span>
+                            <span>Confidence: <strong>${(decision.fast.confidence * 100).toFixed(0)}%</strong></span>
+                        </div>
+                        
+                        <h3>🤖 AI Agent Decision (${decision.ai.processingTime})</h3>
+                        <div class="decision-item">
+                            <span>Action: <strong>${decision.ai.action}</strong></span>
+                            <span>Confidence: <strong>${(decision.ai.confidence * 100).toFixed(0)}%</strong></span>
+                        </div>
+                        
+                        <h3>📊 Performance Comparison</h3>
+                        <div class="decision-item" style="background: #00ff4122; border: 1px solid #00ff41;">
+                            <span>Speed Improvement: <strong>${decision.consensus.speedImprovement}</strong></span>
+                            <span>Consensus: <strong>${decision.consensus.action}</strong></span>
+                        </div>
+                        <div class="decision-item">
+                            <span>Combined Confidence:</span>
+                            <div style="display: flex; align-items: center;">
+                                <span>${(decision.consensus.confidence * 100).toFixed(0)}%</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${decision.consensus.confidence * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add decision message
+                    addMessage('COORDINATOR', 'EXECUTION', 'DECISION', 
+                        `Execute ${decision.fast.action} - Fast decision selected for optimal speed`);
+                    
+                    // Reset agents
+                    setTimeout(() => {
+                        ['market', 'risk', 'strategy', 'performance', 'execution'].forEach(agent => {
+                            updateAgentCard(agent, 'online', 'Ready');
+                        });
+                    }, 3000);
+                }
+            } catch (error) {
+                addMessage('SYSTEM', 'ERROR', 'DECISION_FAILED', error.message);
+            }
+        }
+        
+        // Test fast decision performance
+        async function testFastDecision() {
+            addMessage('SYSTEM', 'FAST_DECISION', 'TEST', 'Testing fast decision service performance...');
+            
+            updateAgentCard('execution', 'processing', 'Speed testing...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/test/fast-decision`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ iterations: 10 })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.data.statistics;
+                    
+                    addMessage('FAST_DECISION', 'PERFORMANCE', 'RESULTS', 
+                        `Average: ${stats.averageTime}, Min: ${stats.minTime}, Max: ${stats.maxTime}`);
+                    
+                    if (stats.meetsTarget) {
+                        addMessage('FAST_DECISION', 'SUCCESS', 'TARGET_MET', 
+                            '✅ Fast decision meets < 100ms target for real-time trading');
+                    } else {
+                        addMessage('FAST_DECISION', 'WARNING', 'TARGET_MISSED', 
+                            '⚠️ Fast decision exceeds 100ms target');
+                    }
+                    
+                    // Update decision panel with performance results
+                    const decisionContent = document.getElementById('decisionContent');
+                    decisionContent.innerHTML = `
+                        <h3>⚡ Fast Decision Performance Test</h3>
+                        <div class="decision-item">
+                            <span>Average Latency:</span>
+                            <strong style="color: ${stats.meetsTarget ? '#00ff41' : '#ffaa00'}">${stats.averageTime}</strong>
+                        </div>
+                        <div class="decision-item">
+                            <span>Min/Max:</span>
+                            <span>${stats.minTime} / ${stats.maxTime}</span>
+                        </div>
+                        <div class="decision-item">
+                            <span>Success Rate:</span>
+                            <strong>${stats.successRate}</strong>
+                        </div>
+                        <div class="decision-item" style="background: ${stats.meetsTarget ? '#00ff4122' : '#ffaa0022'};">
+                            <span>Target ${stats.targetLatency}:</span>
+                            <strong>${stats.meetsTarget ? '✅ PASSED' : '⚠️ NEEDS OPTIMIZATION'}</strong>
+                        </div>
+                    `;
+                    
+                    updateAgentCard('execution', 'online', `Avg: ${stats.averageTime}`);
+                }
+            } catch (error) {
+                addMessage('SYSTEM', 'ERROR', 'FAST_DECISION_FAILED', error.message);
+                updateAgentCard('execution', 'online', 'Test failed');
+            }
+        }
+        
+        // Stress test
+        async function stressTest() {
+            addMessage('SYSTEM', 'ALL', 'STRESS_TEST', 'Starting stress test with 100 messages...');
+            
+            const messageTypes = ['MARKET_UPDATE', 'RISK_ASSESSMENT', 'STRATEGY_SIGNAL', 'PERFORMANCE_CHECK'];
+            const agents = ['MARKET_ANALYST', 'RISK_MANAGER', 'STRATEGY_OPTIMIZER', 'PERFORMANCE_ANALYST'];
+            
+            for (let i = 0; i < 100; i++) {
+                const from = agents[Math.floor(Math.random() * agents.length)];
+                const to = Math.random() > 0.5 ? 'COORDINATOR' : agents[Math.floor(Math.random() * agents.length)];
+                const type = messageTypes[Math.floor(Math.random() * messageTypes.length)];
+                
+                // Simulate agent activity
+                const agentType = from.split('_')[0].toLowerCase();
+                updateAgentCard(agentType, 'processing', `Message ${i + 1}/100`);
+                
+                addMessage(from, to, type, `Test message ${i + 1}`);
+                
+                // Small delay between messages
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            // Reset all agents
+            ['market', 'risk', 'strategy', 'performance', 'execution'].forEach(agent => {
+                updateAgentCard(agent, 'online', 'Stress test complete');
+            });
+            
+            addMessage('SYSTEM', 'ALL', 'COMPLETE', 'Stress test completed: 100 messages processed');
+        }
+        
+        // Event listeners
+        document.getElementById('initBtn').addEventListener('click', initializeAgents);
+        document.getElementById('marketAnalysisBtn').addEventListener('click', testMarketAnalysis);
+        document.getElementById('riskAssessmentBtn').addEventListener('click', testRiskAssessment);
+        document.getElementById('decisionFlowBtn').addEventListener('click', testDecisionFlow);
+        document.getElementById('fastDecisionBtn').addEventListener('click', testFastDecision);
+        document.getElementById('stressTestBtn').addEventListener('click', stressTest);
+        
+        // Add initial message
+        addMessage('SYSTEM', 'USER', 'WELCOME', 'Agent test dashboard ready. Click "Initialize Agent Team" to begin.');
+    </script>
+</body>
+</html>

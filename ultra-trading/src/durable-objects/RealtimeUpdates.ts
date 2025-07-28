@@ -27,13 +27,13 @@ interface BroadcastMessage {
 
 export class RealtimeUpdates {
   private state: DurableObjectState;
-  private storage: DurableObjectStorage;
+  // private storage: DurableObjectStorage;
   private clients: Map<string, Client> = new Map();
   private channels: Map<string, Set<string>> = new Map(); // channel -> client IDs
   
   constructor(state: DurableObjectState) {
     this.state = state;
-    this.storage = state.storage;
+    // this.storage = state.storage;
   }
 
   /**
@@ -80,7 +80,7 @@ export class RealtimeUpdates {
     // Store client information
     const clientInfo: Client = {
       id: clientId,
-      websocket: server,
+      websocket: server as any, // Type cast for Cloudflare Workers WebSocket
       subscribedChannels: new Set(),
       connectedAt: Date.now()
     };

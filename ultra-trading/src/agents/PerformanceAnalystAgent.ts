@@ -35,7 +35,7 @@ export class PerformanceAnalystAgent extends AIAgent implements IPerformanceAgen
   private readonly DAILY_PROFIT_TARGET = 300; // $300 daily target
   private readonly DAILY_LOSS_LIMIT = 300; // $300 max loss
   private readonly MIN_WIN_RATE = 0.4; // 40% minimum win rate
-  private readonly TARGET_PROFIT_FACTOR = 1.5; // Target 1.5:1 profit factor
+  // private readonly TARGET_PROFIT_FACTOR = 1.5; // Target 1.5:1 profit factor - unused
   
   // Performance tracking
   private dailyMetrics: PerformanceStatus = {
@@ -323,7 +323,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
     // In production, this would load from KV or D1
     // For now, start fresh each day
     const now = new Date();
-    const todayKey = `performance:${now.toISOString().split('T')[0]}`;
+    // const todayKey = `performance:${now.toISOString().split('T')[0]}`; // For future KV storage
     
     // Reset metrics at start of day
     this.dailyMetrics = {

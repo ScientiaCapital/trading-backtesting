@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Timer Component</title>
+    <style>
+        .market-timer {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+        }
+        
+        .timer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .timer-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff41;
+        }
+        
+        .market-status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-open { background: #00ff41; color: #0f0f0f; }
+        .status-closed { background: #ff0041; color: #fff; }
+        .status-pre-market { background: #ffaa00; color: #0f0f0f; }
+        .status-after-hours { background: #0099ff; color: #fff; }
+        
+        .timer-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .timer-item {
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .timer-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .timer-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff41;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .timer-value.alert {
+            color: #ffaa00;
+        }
+        
+        .timer-value.urgent {
+            color: #ff0041;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .session-timeline {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+        
+        .timeline-bar {
+            height: 40px;
+            background: #0f0f0f;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            margin: 10px 0;
+        }
+        
+        .timeline-segment {
+            position: absolute;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .segment-pre-market {
+            background: #ffaa00;
+            color: #0f0f0f;
+            left: 0;
+            width: 22.5%; /* 4:00-9:30 = 5.5h / 24h */
+        }
+        
+        .segment-regular {
+            background: #00ff41;
+            color: #0f0f0f;
+            left: 22.5%;
+            width: 27%; /* 9:30-16:00 = 6.5h / 24h */
+        }
+        
+        .segment-after-hours {
+            background: #0099ff;
+            color: #fff;
+            left: 49.5%;
+            width: 16.5%; /* 16:00-20:00 = 4h / 24h */
+        }
+        
+        .current-time-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ff0041;
+            box-shadow: 0 0 10px rgba(255, 0, 65, 0.5);
+            transition: left 1s linear;
+        }
+        
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="market-timer">
+        <div class="timer-header">
+            <div class="timer-title">Market Timer</div>
+            <div id="marketStatusBadge" class="market-status-badge status-closed">LOADING</div>
+        </div>
+        
+        <div class="timer-grid">
+            <div class="timer-item">
+                <div class="timer-label">Market Time</div>
+                <div id="marketTime" class="timer-value">--:--:--</div>
+            </div>
+            
+            <div class="timer-item">
+                <div class="timer-label">Time to Open</div>
+                <div id="timeToOpen" class="timer-value">--:--:--</div>
+            </div>
+            
+            <div class="timer-item">
+                <div class="timer-label">Trading Starts</div>
+                <div id="tradingStartTime" class="timer-value">--:--:--</div>
+            </div>
+            
+            <div class="timer-item">
+                <div class="timer-label">Time to Close</div>
+                <div id="timeToClose" class="timer-value">--:--:--</div>
+            </div>
+        </div>
+        
+        <div class="session-timeline">
+            <div class="timeline-bar">
+                <div class="timeline-segment segment-pre-market">PRE</div>
+                <div class="timeline-segment segment-regular">REGULAR</div>
+                <div class="timeline-segment segment-after-hours">AFTER</div>
+                <div id="currentTimeMarker" class="current-time-marker" style="left: 0%"></div>
+            </div>
+            <div class="timeline-labels">
+                <span>4:00 AM</span>
+                <span>9:30 AM</span>
+                <span>4:00 PM</span>
+                <span>8:00 PM</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        class MarketTimer {
+            constructor() {
+                this.elements = {
+                    marketTime: document.getElementById('marketTime'),
+                    timeToOpen: document.getElementById('timeToOpen'),
+                    tradingStartTime: document.getElementById('tradingStartTime'),
+                    timeToClose: document.getElementById('timeToClose'),
+                    statusBadge: document.getElementById('marketStatusBadge'),
+                    timeMarker: document.getElementById('currentTimeMarker')
+                };
+                
+                this.start();
+            }
+            
+            start() {
+                this.update();
+                setInterval(() => this.update(), 1000);
+            }
+            
+            update() {
+                const now = new Date();
+                const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+                
+                // Update market time
+                this.elements.marketTime.textContent = et.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                // Calculate market status
+                const hours = et.getHours();
+                const minutes = et.getMinutes();
+                const totalMinutes = hours * 60 + minutes;
+                
+                // Update status badge
+                let status = 'CLOSED';
+                let statusClass = 'status-closed';
+                
+                if (totalMinutes >= 240 && totalMinutes < 570) { // 4:00 - 9:30
+                    status = 'PRE-MARKET';
+                    statusClass = 'status-pre-market';
+                } else if (totalMinutes >= 570 && totalMinutes < 960) { // 9:30 - 16:00
+                    status = 'MARKET OPEN';
+                    statusClass = 'status-open';
+                } else if (totalMinutes >= 960 && totalMinutes < 1200) { // 16:00 - 20:00
+                    status = 'AFTER-HOURS';
+                    statusClass = 'status-after-hours';
+                }
+                
+                this.elements.statusBadge.textContent = status;
+                this.elements.statusBadge.className = `market-status-badge ${statusClass}`;
+                
+                // Update countdowns
+                this.updateCountdowns(et, totalMinutes);
+                
+                // Update timeline marker
+                const dayProgress = (totalMinutes / 1440) * 100; // 1440 minutes in a day
+                this.elements.timeMarker.style.left = `${dayProgress}%`;
+            }
+            
+            updateCountdowns(et, totalMinutes) {
+                const day = et.getDay();
+                const isWeekend = day === 0 || day === 6;
+                
+                // Time to market open
+                if (totalMinutes < 570 && !isWeekend) {
+                    const openMinutes = 570 - totalMinutes;
+                    this.elements.timeToOpen.textContent = this.formatTime(openMinutes * 60);
+                    this.elements.timeToOpen.className = 'timer-value' + (openMinutes < 30 ? ' alert' : '');
+                } else if (isWeekend || totalMinutes >= 960) {
+                    const nextOpen = this.getNextMarketOpen(et);
+                    const msToOpen = nextOpen - et;
+                    this.elements.timeToOpen.textContent = this.formatTime(msToOpen / 1000);
+                    this.elements.timeToOpen.className = 'timer-value';
+                } else {
+                    this.elements.timeToOpen.textContent = 'OPEN';
+                    this.elements.timeToOpen.className = 'timer-value';
+                }
+                
+                // Time to trading mode (11 AM)
+                if (totalMinutes >= 570 && totalMinutes < 660) {
+                    const tradingMinutes = 660 - totalMinutes;
+                    this.elements.tradingStartTime.textContent = this.formatTime(tradingMinutes * 60);
+                    this.elements.tradingStartTime.className = 'timer-value' + (tradingMinutes < 10 ? ' urgent' : '');
+                } else if (totalMinutes >= 660) {
+                    this.elements.tradingStartTime.textContent = 'ACTIVE';
+                    this.elements.tradingStartTime.className = 'timer-value';
+                } else {
+                    this.elements.tradingStartTime.textContent = '--:--:--';
+                    this.elements.tradingStartTime.className = 'timer-value';
+                }
+                
+                // Time to close
+                if (totalMinutes >= 570 && totalMinutes < 960) {
+                    const closeMinutes = 960 - totalMinutes;
+                    this.elements.timeToClose.textContent = this.formatTime(closeMinutes * 60);
+                    this.elements.timeToClose.className = 'timer-value' + (closeMinutes < 30 ? ' alert' : '');
+                } else {
+                    this.elements.timeToClose.textContent = 'CLOSED';
+                    this.elements.timeToClose.className = 'timer-value';
+                }
+            }
+            
+            getNextMarketOpen(date) {
+                const next = new Date(date);
+                next.setHours(9, 30, 0, 0);
+                
+                // If past 9:30 today, go to tomorrow
+                if (date.getHours() >= 9 && date.getMinutes() >= 30) {
+                    next.setDate(next.getDate() + 1);
+                }
+                
+                // Skip weekends
+                while (next.getDay() === 0 || next.getDay() === 6) {
+                    next.setDate(next.getDate() + 1);
+                }
+                
+                return next;
+            }
+            
+            formatTime(seconds) {
+                if (seconds <= 0) return 'NOW';
+                
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                if (hours > 24) {
+                    const days = Math.floor(hours / 24);
+                    return `${days}d ${hours % 24}h`;
+                }
+                
+                return [hours, minutes, secs]
+                    .map(v => v < 10 ? '0' + v : v)
+                    .join(':');
+            }
+        }
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new MarketTimer();
+        });
+    </script>
+</body>
+</html>
