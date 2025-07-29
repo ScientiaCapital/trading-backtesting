@@ -63,7 +63,7 @@ export const RealtimeDashboard: React.FC = () => {
     currentDrawdown: 0
   });
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({});
-  const [alerts, setAlerts] = useState<Array<{ id: string; severity: string; message: string; timestamp: string }>>([]);
+  const [alerts, setAlerts] = useState<{ id: string; severity: string; message: string; timestamp: string }[]>([]);
   const [systemStatus, setSystemStatus] = useState<'online' | 'offline' | 'degraded'>('offline');
   
   const wsRef = useRef<WebSocket | null>(null);

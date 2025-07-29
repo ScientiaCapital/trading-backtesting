@@ -28,8 +28,8 @@ interface BroadcastMessage {
 export class RealtimeUpdates {
   private state: DurableObjectState;
   // private storage: DurableObjectStorage;
-  private clients: Map<string, Client> = new Map();
-  private channels: Map<string, Set<string>> = new Map(); // channel -> client IDs
+  private clients = new Map<string, Client>();
+  private channels = new Map<string, Set<string>>(); // channel -> client IDs
   
   constructor(state: DurableObjectState) {
     this.state = state;
@@ -252,7 +252,7 @@ export class RealtimeUpdates {
    */
   private async handleBroadcast(request: Request): Promise<Response> {
     try {
-      const message = await request.json() as BroadcastMessage;
+      const message = await request.json();
       
       await this.broadcastToChannel(message.channel, {
         type: message.type,

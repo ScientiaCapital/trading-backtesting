@@ -106,7 +106,7 @@ export class TechnicalIndicatorsService {
   /**
    * Calculate RSI (Relative Strength Index)
    */
-  async calculateRSI(closes: number[], period: number = 14): Promise<(number | undefined)[]> {
+  async calculateRSI(closes: number[], period = 14): Promise<(number | undefined)[]> {
     try {
       const rsiValues = await this.indicators.rsi(closes, period);
       return this.padUndefined(rsiValues, closes.length);
@@ -121,9 +121,9 @@ export class TechnicalIndicatorsService {
    */
   async calculateMACD(
     closes: number[],
-    fastPeriod: number = 12,
-    slowPeriod: number = 26,
-    signalPeriod: number = 9
+    fastPeriod = 12,
+    slowPeriod = 26,
+    signalPeriod = 9
   ): Promise<({ macd: number; signal: number; histogram: number } | undefined)[]> {
     try {
       const macdResult = await this.indicators.macd(closes, fastPeriod, slowPeriod, signalPeriod);
@@ -160,8 +160,8 @@ export class TechnicalIndicatorsService {
    */
   async calculateBollingerBands(
     closes: number[],
-    period: number = 20,
-    stdDev: number = 2
+    period = 20,
+    stdDev = 2
   ): Promise<({ upper: number; middle: number; lower: number } | undefined)[]> {
     try {
       const bbResult = await (this.indicators as any).bbands(closes, period, stdDev, stdDev);
@@ -241,7 +241,7 @@ export class TechnicalIndicatorsService {
     highs: number[],
     lows: number[],
     closes: number[],
-    period: number = 14
+    period = 14
   ): Promise<(number | undefined)[]> {
     try {
       const atrValues = await this.indicators.atr(highs, lows, closes, period);

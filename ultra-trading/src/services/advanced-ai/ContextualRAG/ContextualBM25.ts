@@ -29,8 +29,8 @@ export class ContextualBM25Service {
   };
   
   // Cache for document statistics
-  private statsCache: Map<string, DocumentStats> = new Map();
-  private tokenCache: Map<string, string[]> = new Map();
+  private statsCache = new Map<string, DocumentStats>();
+  private tokenCache = new Map<string, string[]>();
 
   constructor(private _env: CloudflareBindings) {
     this.logger = createLogger({ env: this._env } as any);

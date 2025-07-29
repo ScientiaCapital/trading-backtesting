@@ -255,8 +255,8 @@ export class BacktestDataConverter implements DataConverter {
       // Get the slice for this period
       const periodOpen = data.open[i] || 0;
       const periodClose = data.close[endIdx - 1] || 0;
-      const highSlice = data.high.slice(i, endIdx).filter(h => h !== undefined) as number[];
-      const lowSlice = data.low.slice(i, endIdx).filter(l => l !== undefined) as number[];
+      const highSlice = data.high.slice(i, endIdx).filter(h => h !== undefined);
+      const lowSlice = data.low.slice(i, endIdx).filter(l => l !== undefined);
       const periodHigh = highSlice.length > 0 ? Math.max(...highSlice) : 0;
       const periodLow = lowSlice.length > 0 ? Math.min(...lowSlice) : 0;
       const periodVolume = data.volume.slice(i, endIdx).reduce((a, b) => (a || 0) + (b || 0), 0);

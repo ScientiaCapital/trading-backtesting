@@ -44,12 +44,12 @@ export abstract class FastquantBacktesterBase {
     symbol: string,
     startDate: string,
     endDate: string,
-    timeframe: string = '1d'
+    timeframe = '1d'
   ): Promise<OHLCVData> {
     try {
       // Check cache first
       const cacheKey = `backtest:data:${symbol}:${startDate}:${endDate}:${timeframe}`;
-      const cached = await this.env.CACHE.get(cacheKey, 'json') as OHLCVData | null;
+      const cached = await this.env.CACHE.get(cacheKey, 'json');
       
       if (cached) {
         console.log(`[${this.requestId}] Using cached data for ${symbol}`);
@@ -130,7 +130,7 @@ export abstract class FastquantBacktesterBase {
         );
       }
 
-      const result = await response.json() as BacktestResponse;
+      const result = await response.json();
       
       if (!result.success) {
         throw new AppError(
@@ -193,7 +193,7 @@ export abstract class FastquantBacktesterBase {
    */
   async getResult(backtestId: string): Promise<BacktestResult | null> {
     // Check cache first
-    const cached = await this.env.CACHE.get(`backtest:result:${backtestId}`, 'json') as BacktestResult | null;
+    const cached = await this.env.CACHE.get(`backtest:result:${backtestId}`, 'json');
     if (cached) return cached;
 
     // Get from R2
@@ -202,7 +202,7 @@ export abstract class FastquantBacktesterBase {
     
     if (!object) return null;
 
-    const result = await object.json() as BacktestResult;
+    const result = await object.json();
     
     // Re-cache
     await this.env.CACHE.put(`backtest:result:${backtestId}`, JSON.stringify(result), {
@@ -242,7 +242,7 @@ export abstract class FastquantBacktesterBase {
   /**
    * Clean up old backtests
    */
-  async cleanupOldBacktests(daysToKeep: number = 30): Promise<number> {
+  async cleanupOldBacktests(daysToKeep = 30): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
     
@@ -263,7 +263,7 @@ export abstract class FastquantBacktesterBase {
   /**
    * List recent backtests
    */
-  async listRecentBacktests(limit: number = 10): Promise<BacktestResult[]> {
+  async listRecentBacktests(limit = 10): Promise<BacktestResult[]> {
     const results: BacktestResult[] = [];
     const listed = await this.env.R2.list({ 
       prefix: 'backtests/',
@@ -273,7 +273,7 @@ export abstract class FastquantBacktesterBase {
     for (const object of listed.objects) {
       const result = await this.env.R2.get(object.key);
       if (result) {
-        const backtest = await result.json() as BacktestResult;
+        const backtest = await result.json();
         results.push(backtest);
       }
     }

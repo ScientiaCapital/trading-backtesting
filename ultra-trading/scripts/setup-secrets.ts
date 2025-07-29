@@ -84,7 +84,7 @@ function executeCommand(command: string, description: string) {
   }
 }
 
-function generateSecureSecret(length: number = 32): string {
+function generateSecureSecret(length = 32): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -143,7 +143,7 @@ async function listSecrets(environment: string) {
   console.log(`\n📋 Current secrets for ${environment}:`);
   try {
     execSync(`wrangler secret list --env ${environment}`, { stdio: 'inherit' });
-  } catch (error) {
+  } catch {
     console.log(`❌ Failed to list secrets for ${environment}`);
   }
 }

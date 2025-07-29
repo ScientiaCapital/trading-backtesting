@@ -242,7 +242,7 @@ export const requireRole = (allowedRoles: string[]) => async (c: HonoContext, ne
           code: 'INSUFFICIENT_PERMISSIONS',
           message: 'Insufficient permissions for this operation'
         }
-      }, 403 as 403);
+      }, 403 as const);
     }
     
     await next();
@@ -272,7 +272,7 @@ export const tenantIsolationMiddleware = async (c: HonoContext, next: Next): Pro
         code: 'INVALID_TENANT',
         message: 'Invalid tenant'
       }
-    }, 403 as 403);
+    }, 403 as const);
   }
   
   await next();
@@ -319,7 +319,7 @@ export const errorMiddleware = async (c: HonoContext, next: Next): Promise<Respo
         request_id: c.get('requestId'),
         timestamp: new Date().toISOString()
       }
-    }, 500 as 500);
+    }, 500 as const);
   }
 };
 

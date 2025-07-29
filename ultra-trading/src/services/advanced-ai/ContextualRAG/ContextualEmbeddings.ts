@@ -32,7 +32,7 @@ export interface ChunkContext {
 
 export class ContextualEmbeddingsService {
   private logger: ReturnType<typeof createLogger>;
-  private contextCache: Map<string, ChunkContext> = new Map();
+  private contextCache = new Map<string, ChunkContext>();
 
   constructor(private env: CloudflareBindings) {
     this.logger = createLogger({ env } as any);
@@ -175,20 +175,20 @@ export class ContextualEmbeddingsService {
     const technicals = chunk.metadata['technicals'];
     let context = '';
 
-    if (technicals['rsi']) {
-      const rsi = technicals['rsi'];
+    if (technicals.rsi) {
+      const {rsi} = technicals;
       if (rsi > 70) context += 'RSI indicates overbought conditions. ';
       else if (rsi < 30) context += 'RSI indicates oversold conditions. ';
     }
 
-    if (technicals['macd']?.['signal']) {
-      const macd = technicals['macd'];
-      if (macd['histogram'] > 0) context += 'MACD bullish. ';
+    if (technicals.macd?.signal) {
+      const {macd} = technicals;
+      if (macd.histogram > 0) context += 'MACD bullish. ';
       else context += 'MACD bearish. ';
     }
 
-    if (technicals['bollingerBands']) {
-      const bollingerBands = technicals['bollingerBands'];
+    if (technicals.bollingerBands) {
+      const {bollingerBands} = technicals;
       const { upper, lower } = bollingerBands;
       if (chunk.price > upper) context += 'Price above upper Bollinger Band. ';
       else if (chunk.price < lower) context += 'Price below lower Bollinger Band. ';
@@ -204,8 +204,8 @@ export class ContextualEmbeddingsService {
     if (!chunk.metadata?.['sentiment']) return '';
 
     const sentiment = chunk.metadata['sentiment'];
-    const score = sentiment['score'];
-    const sources = sentiment['sources'];
+    const {score} = sentiment;
+    const {sources} = sentiment;
     let context = '';
 
     if (score > 0.7) context += 'Strong positive sentiment. ';

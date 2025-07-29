@@ -32,8 +32,8 @@ describe('Response Utilities', () => {
     expect(response.success).toBe(true);
     expect(response.data).toEqual({ test: 'data' });
     expect(response.meta).toBeDefined();
-    expect(response.meta!.request_id).toBeDefined();
-    expect(response.meta!.timestamp).toBeDefined();
+    expect(response.meta?.request_id).toBeDefined();
+    expect(response.meta?.timestamp).toBeDefined();
   });
 
   it('should create error response', () => {

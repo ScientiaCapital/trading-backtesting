@@ -286,7 +286,7 @@ tradingRoutes.get('/orders', async (c) => {
     const tradingService = new AlpacaTradingService(c.env, c.req.header('X-Tenant-ID') || 'default');
     
     const orders = await tradingService.getOrders(
-      query.status as 'open' | 'closed' | 'all' | undefined,
+      query.status,
       query.limit,
       query.after,
       query.until,
@@ -503,7 +503,7 @@ tradingRoutes.get('/status', async (c) => {
     const clock = await alpaca.getClock();
     
     // Check if trading is enabled (from KV)
-    const tradingEnabled = await c.env.CACHE.get('trading:enabled', 'json') as { enabled: boolean } | null;
+    const tradingEnabled = await c.env.CACHE.get('trading:enabled', 'json');
     
     const status = {
       tradingEnabled: tradingEnabled?.enabled ?? false,

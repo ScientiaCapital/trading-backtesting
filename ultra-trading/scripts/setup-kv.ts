@@ -54,14 +54,14 @@ function createKVNamespace(namespace: KVNamespace, environment: string) {
   
   // Extract IDs from output
   if (prodOutput) {
-    const idMatch = prodOutput.match(/id = "([^"]+)"/);
+    const idMatch = /id = "([^"]+)"/.exec(prodOutput);
     if (idMatch) {
       console.log(`📋 Production ID: ${idMatch[1]}`);
     }
   }
   
   if (previewOutput) {
-    const idMatch = previewOutput.match(/id = "([^"]+)"/);
+    const idMatch = /id = "([^"]+)"/.exec(previewOutput);
     if (idMatch) {
       console.log(`📋 Preview ID: ${idMatch[1]}`);
     }

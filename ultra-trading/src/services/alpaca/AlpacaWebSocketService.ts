@@ -334,7 +334,7 @@ export class AlpacaWebSocketService {
    */
   async startPolling(
     symbols: string[],
-    interval: number = 1000,
+    interval = 1000,
     handlers: {
       onData?: (data: any) => void;
       onError?: (error: Error) => void;

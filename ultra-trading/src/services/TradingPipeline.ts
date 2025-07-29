@@ -124,7 +124,7 @@ export class TradingPipeline {
   /**
    * Stop the automated trading pipeline
    */
-  async stop(reason: string = 'Manual stop'): Promise<void> {
+  async stop(reason = 'Manual stop'): Promise<void> {
     console.log('Stopping automated trading pipeline', { reason });
 
     this.status.isRunning = false;
@@ -269,7 +269,7 @@ export class TradingPipeline {
       const response = await this.sendToCoordinator('/decision', { context });
       
       if (response.ok) {
-        const decision = await response.json() as TradingDecision;
+        const decision = await response.json();
         
         console.log('Trading decision received', {
           id: decision.id,
@@ -346,7 +346,7 @@ export class TradingPipeline {
       const response = await this.sendToCoordinator('/performance', {});
       
       if (response.ok) {
-        return await response.json() as PerformanceStatus;
+        return await response.json();
       }
       
       // Return default if failed

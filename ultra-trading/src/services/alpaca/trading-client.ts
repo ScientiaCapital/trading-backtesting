@@ -51,7 +51,7 @@ export class AlpacaService {
   private readonly config: AlpacaConfig;
   private readonly credentialManager: CredentialManager;
   private readonly rateLimiter: RateLimiter;
-  private credentials: Map<string, AlpacaCredentials> = new Map();
+  private credentials = new Map<string, AlpacaCredentials>();
 
   constructor(
     credentialManager: CredentialManager,
@@ -128,7 +128,7 @@ export class AlpacaService {
         throw new AlpacaAPIError(response.status, error);
       }
 
-      return response.json() as Promise<T>;
+      return response.json();
     }, {
       maxRetries: this.config.maxRetries!,
       retryDelay: 1000

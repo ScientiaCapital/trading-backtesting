@@ -98,7 +98,7 @@ class AlpacaCryptoConnector implements Connector {
           x: string;   // exchange
         };
       }
-      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`) as CryptoQuoteResponse;
+      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`);
       const q = quote.quote;
       
       return {
@@ -120,7 +120,7 @@ class AlpacaCryptoConnector implements Connector {
   async getBars(symbol: string, _timeframe: string, _limit: number): Promise<AssetBar[]> {
     try {
       interface CryptoBarsResponse {
-        bars: Array<{
+        bars: {
           o: number;   // open
           h: number;   // high
           l: number;   // low
@@ -128,7 +128,7 @@ class AlpacaCryptoConnector implements Connector {
           v: number;   // volume
           t: string;   // timestamp
           vw?: number; // vwap
-        }>;
+        }[];
       }
       const response = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/bars`, {
         queryParams: {
@@ -136,7 +136,7 @@ class AlpacaCryptoConnector implements Connector {
           limit: _limit,
           asof: new Date().toISOString()
         }
-      }) as CryptoBarsResponse;
+      });
       
       const bars = response.bars || [];
       return bars.map((bar) => ({
@@ -292,17 +292,17 @@ export class MultiAssetConnector {
     }
     
     // Forex pairs
-    if (symbol.match(/^[A-Z]{3}\/[A-Z]{3}$/)) {
+    if (/^[A-Z]{3}\/[A-Z]{3}$/.exec(symbol)) {
       return AssetClass.FOREX;
     }
     
     // Commodities (futures)
-    if (symbol.match(/^[A-Z]{2,3}[0-9]{2}$/)) {
+    if (/^[A-Z]{2,3}[0-9]{2}$/.exec(symbol)) {
       return AssetClass.COMMODITIES;
     }
     
     // Options
-    if (symbol.length > 10 && symbol.match(/[0-9]{6}[CP][0-9]{8}/)) {
+    if (symbol.length > 10 && (/[0-9]{6}[CP][0-9]{8}/.exec(symbol))) {
       return AssetClass.OPTIONS;
     }
     
@@ -343,8 +343,8 @@ export class MultiAssetConnector {
    */
   async getBars(
     symbol: string, 
-    timeframe: string = '5Min',
-    limit: number = 100
+    timeframe = '5Min',
+    limit = 100
   ): Promise<AssetBar[]> {
     const assetClass = this.getAssetClass(symbol);
     
@@ -468,19 +468,19 @@ export class MultiAssetConnector {
    */
   async detectArbitrage(
     symbols: string[],
-    threshold: number = 0.001 // 0.1% minimum
-  ): Promise<Array<{
+    threshold = 0.001 // 0.1% minimum
+  ): Promise<{
     symbol1: string;
     symbol2: string;
     spread: number;
     opportunity: 'BUY_1_SELL_2' | 'BUY_2_SELL_1';
-  }>> {
-    const opportunities: Array<{
+  }[]> {
+    const opportunities: {
       symbol1: string;
       symbol2: string;
       spread: number;
       opportunity: 'BUY_1_SELL_2' | 'BUY_2_SELL_1';
-    }> = [];
+    }[] = [];
     
     // Get quotes for all symbols
     const quotes = await Promise.all(

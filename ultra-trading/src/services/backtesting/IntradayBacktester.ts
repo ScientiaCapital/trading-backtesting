@@ -103,7 +103,7 @@ export class IntradayBacktester extends FastquantBacktesterBase {
    */
   async testOpeningRangeBreakout(
     symbol: string,
-    days: number = 20,
+    days = 20,
     parameters?: IntradayParameters
   ): Promise<BacktestResult> {
     const endDate = new Date();
@@ -164,7 +164,7 @@ export class IntradayBacktester extends FastquantBacktesterBase {
    */
   async testVWAPReversion(
     symbol: string,
-    days: number = 20,
+    days = 20,
     parameters?: IntradayParameters
   ): Promise<BacktestResult> {
     const endDate = new Date();
@@ -222,7 +222,7 @@ export class IntradayBacktester extends FastquantBacktesterBase {
    */
   async testRSIExtremes(
     symbol: string,
-    days: number = 20,
+    days = 20,
     parameters?: IntradayParameters
   ): Promise<BacktestResult> {
     const endDate = new Date();
@@ -456,11 +456,11 @@ export class IntradayBacktester extends FastquantBacktesterBase {
   ): Promise<{
     summary: string;
     recommendations: string[];
-    bestStrategies: Array<{
+    bestStrategies: {
       symbol: string;
       strategy: string;
       metrics: BacktestMetrics;
-    }>;
+    }[];
   }> {
     const validations = await this.validateDailyTarget(symbols);
     
@@ -522,7 +522,7 @@ export class IntradayBacktester extends FastquantBacktesterBase {
   /**
    * Schedule nightly backtest run
    */
-  async scheduleNightlyRun(time: string = '21:00'): Promise<void> {
+  async scheduleNightlyRun(time = '21:00'): Promise<void> {
     const scheduledTime = new Date();
     const [hours, minutes] = time.split(':').map(Number);
     scheduledTime.setHours(hours || 21, minutes || 0, 0, 0);

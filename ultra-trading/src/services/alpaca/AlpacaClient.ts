@@ -65,7 +65,7 @@ export interface RateLimitInfo {
  */
 export class AlpacaClient {
   private config: AlpacaConfig;
-  private rateLimitInfo: Map<string, RateLimitInfo> = new Map();
+  private rateLimitInfo = new Map<string, RateLimitInfo>();
   private readonly logger;
 
   constructor(
@@ -516,7 +516,7 @@ export class AlpacaClient {
     return {
       async getLatestQuote(symbol: string): Promise<{ symbol: string; bid_price: number; ask_price: number; bid_size: number; ask_size: number; timestamp: string }> {
         const response = await self.dataRequest<{ quote: any }>(`/v2/stocks/${symbol}/quotes/latest`);
-        const quote = response.quote;
+        const {quote} = response;
         return {
           symbol,
           bid_price: quote.bp,
@@ -526,7 +526,7 @@ export class AlpacaClient {
           timestamp: quote.t
         };
       },
-      async getQuotes(symbol: string): Promise<{ quotes: Array<{ ap: number; as: number; bp: number; bs: number; t: string }> }> {
+      async getQuotes(symbol: string): Promise<{ quotes: { ap: number; as: number; bp: number; bs: number; t: string }[] }> {
         return self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
       },
       async getBars(symbol: string, params?: {
@@ -534,7 +534,7 @@ export class AlpacaClient {
         end?: string;
         timeframe?: string;
         limit?: number;
-      }): Promise<{ bars: Array<{ t: string; o: number; h: number; l: number; c: number; v: number }> }> {
+      }): Promise<{ bars: { t: string; o: number; h: number; l: number; c: number; v: number }[] }> {
         return self.dataRequest(`/v2/stocks/${symbol}/bars`, {
           queryParams: params as Record<string, string | number | boolean>
         });

@@ -298,7 +298,7 @@ export class CronHandler {
    */
   private async isTradingEnabled(): Promise<boolean> {
     try {
-      const settings = await this.env.CACHE.get('trading:enabled', 'json') as { enabled: boolean } | null;
+      const settings = await this.env.CACHE.get('trading:enabled', 'json');
       return settings?.enabled ?? true; // Default to enabled
     } catch {
       return true;

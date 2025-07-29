@@ -261,7 +261,7 @@ async function testAgentInitialization(): Promise<void> {
     }) as unknown as WorkerRequest
   );
   
-  const status = await response.json() as { agents: Array<{ status: string }> };
+  const status = await response.json();
   console.log('✓ Agents initialized:', status.agents.length);
   console.log('✓ All agents active:', status.agents.every((a) => a.status === 'active'));
 }
@@ -366,12 +366,7 @@ async function testTradingDecisionFlow(): Promise<void> {
     }) as unknown as WorkerRequest
   );
   
-  const decision = await decisionResponse.json() as {
-    action: string;
-    strategy: string;
-    confidence: number;
-    consensus: Record<string, number>;
-  };
+  const decision = await decisionResponse.json();
   console.log('✓ Decision:', decision.action);
   console.log('✓ Strategy:', decision.strategy);
   console.log('✓ Confidence:', (decision.confidence * 100).toFixed(0) + '%');

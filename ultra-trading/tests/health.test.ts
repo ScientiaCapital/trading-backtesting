@@ -25,7 +25,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as { success: boolean; data: { name: string; status: string } };
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.name).toBe('ULTRA Trading Platform');
     expect(json.data.status).toBe('healthy');
@@ -41,7 +41,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as { success: boolean; data: { message: string } };
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.message).toBe('pong');
   });
@@ -56,7 +56,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as { success: boolean; data: { service: string; features: unknown; limits: unknown } };
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.service).toBe('ULTRA Trading Platform');
     expect(json.data.features).toBeDefined();
@@ -73,7 +73,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as { success: boolean; data: { title: string; endpoints: unknown } };
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.title).toBe('ULTRA Trading Platform API');
     expect(json.data.endpoints).toBeDefined();
@@ -89,7 +89,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(404);
     
-    const json = await res.json() as { success: boolean; error: { code: string } };
+    const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.error.code).toBe('NOT_FOUND');
   });

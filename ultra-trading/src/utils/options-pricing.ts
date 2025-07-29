@@ -242,7 +242,7 @@ export class Optimization {
     func: (x: number) => number,
     a: number,
     b: number,
-    tolerance: number = 1e-5
+    tolerance = 1e-5
   ): { x: number; value: number } {
     const phi = (1 + Math.sqrt(5)) / 2; // Golden ratio
     const resphi = 2 - phi;
@@ -468,7 +468,7 @@ export class Statistics {
   /**
    * Calculate standard deviation
    */
-  static standardDeviation(values: number[], sample: boolean = true): number {
+  static standardDeviation(values: number[], sample = true): number {
     if (values.length === 0) return 0;
     
     const avg = this.mean(values);
@@ -583,7 +583,7 @@ export class Matrix {
         for (let k = 0; k < n; k++) {
           sum += (data[k]![i]! - means[i]!) * (data[k]![j]! - means[j]!);
         }
-        cov[i]![j]! = cov[j]![i]! = sum / (n - 1);
+        cov[i]![j] = cov[j]![i] = sum / (n - 1);
       }
     }
 

@@ -60,7 +60,7 @@ function createDatabase(env: Environment) {
     );
     
     // Extract database ID from output
-    const idMatch = createOutput.match(/database_id = "([^"]+)"/);
+    const idMatch = /database_id = "([^"]+)"/.exec(createOutput);
     if (idMatch) {
       console.log(`📋 Database ID: ${idMatch[1]}`);
       console.log(`🔧 Update your wrangler.jsonc with this ID for ${env.name} environment`);

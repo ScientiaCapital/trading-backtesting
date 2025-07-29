@@ -131,7 +131,7 @@ try {
       warning('TypeScript checking not configured');
     }
   }
-} catch (error) {
+} catch {
   warning('Could not validate TypeScript configuration');
 }
 

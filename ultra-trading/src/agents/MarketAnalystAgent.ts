@@ -22,11 +22,11 @@ import { CloudflareBindings } from '@/types';
 interface GeminiAnalysisResponse {
   trend: MarketTrend;
   volatility: VolatilityLevel;
-  patterns: Array<{
+  patterns: {
     name: string;
     confidence: number;
     target?: number;
-  }>;
+  }[];
   support: number[];
   resistance: number[];
   recommendation: TradingRecommendation;
@@ -65,7 +65,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
     this.logger.info('MarketAnalyst handling message', { type: message.type });
     
     switch (message.type) {
-      case MessageType.MARKET_UPDATE:
+      case MessageType.MARKET_UPDATE: {
         const marketData = message.payload as MarketData[] || [];
         
         // Quick mock analysis for development - bypasses AI calls
@@ -93,6 +93,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
           MessageType.ANALYSIS_RESULT,
           mockAnalysis
         );
+      }
         
       default:
         this.logger.debug('Ignoring message type', { type: message.type });
@@ -161,7 +162,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
             const responseText = data.candidates[0].content.parts[0].text;
             try {
               response = JSON.parse(responseText) as GeminiAnalysisResponse;
-            } catch (parseError) {
+            } catch {
               this.logger.warn('Failed to parse Gemini JSON response, using fallback', { 
                 responseText: responseText.substring(0, 200) 
               });
@@ -195,7 +196,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
             )
           ]);
           
-          response = JSON.parse((result as any).response || '{}') as GeminiAnalysisResponse;
+          response = JSON.parse((result).response || '{}') as GeminiAnalysisResponse;
         } catch (error) {
           this.logger.warn('AI call failed, using mock analysis', { error: (error as Error).message });
           response = this.generateMockAnalysis(data);

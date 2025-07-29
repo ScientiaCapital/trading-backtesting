@@ -18,7 +18,7 @@ export interface MarketDataConfig {
  * Provides access to real-time and historical market data
  */
 export class MarketDataService {
-  private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
+  private priceCache = new Map<string, { price: number; timestamp: number }>();
   private readonly CACHE_TTL = 5000; // 5 seconds
 
   constructor(_alpaca: AlpacaService, _config: MarketDataConfig = {}) {

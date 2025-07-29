@@ -165,7 +165,7 @@ export class MarketDataService {
         throw new AppError('MARKET_DATA_ERROR', `Failed to fetch price for ${symbol}`);
       }
 
-      const data = await response.json() as MarketData;
+      const data = await response.json();
       
       // Cache for 1 minute
       const cacheEntry = createCacheEntry(data, 60);
@@ -184,7 +184,7 @@ export class MarketDataService {
     symbol: string, 
     startDate: string, 
     endDate: string,
-    timeframe: string = '1D'
+    timeframe = '1D'
   ): Promise<MarketData[]> {
     const logger = createLogger(this.ctx);
     const cacheKey = createCacheKey('historical', symbol, startDate, endDate, timeframe);
@@ -210,7 +210,7 @@ export class MarketDataService {
         throw new AppError('MARKET_DATA_ERROR', `Failed to fetch historical data for ${symbol}`);
       }
 
-      const data = await response.json() as MarketData[];
+      const data = await response.json();
       
       // Cache for 1 hour
       const cacheEntry = createCacheEntry(data, 3600);
@@ -411,7 +411,7 @@ export class AIService {
       throw new AppError('CLAUDE_API_ERROR', 'Claude API request failed');
     }
 
-    const data = await response.json() as { content: Array<{ text: string }> };
+    const data = await response.json();
     return data.content[0]?.text ?? '';
   }
 
@@ -447,13 +447,7 @@ export class AIService {
       throw new AppError('GEMINI_API_ERROR', 'Gemini API request failed');
     }
 
-    const data = await response.json() as { 
-      candidates: Array<{ 
-        content: { 
-          parts: Array<{ text: string }> 
-        } 
-      }> 
-    };
+    const data = await response.json();
     return data.candidates[0]?.content.parts[0]?.text ?? '';
   }
 

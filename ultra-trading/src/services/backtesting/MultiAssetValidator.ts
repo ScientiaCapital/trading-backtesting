@@ -76,7 +76,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     // Convert MultiAssetBacktestResult to BacktestResult
     return {
       id: `backtest-${Date.now()}`,
-      config: config,
+      config,
       metrics: {
         totalReturn: result.portfolioMetrics.totalReturn,
         annualizedReturn: result.portfolioMetrics.annualizedReturn,
@@ -359,7 +359,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
    * Calculate optimal position sizes based on volatility
    */
   async calculateVolatilityBasedSizing(
-    assets: Array<{ symbol: string; volatility?: number }>
+    assets: { symbol: string; volatility?: number }[]
   ): Promise<Record<string, number>> {
     const sizing: Record<string, number> = {};
     

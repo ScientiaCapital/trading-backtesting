@@ -59,8 +59,8 @@ const testEnv = {
       }
       return null;
     },
-    put: async () => {},
-    delete: async () => {}
+    put: async () => { /* Mock R2 put implementation */ },
+    delete: async () => { /* Mock R2 delete implementation */ }
   },
   TRADING_SESSION: {
     idFromName: (name: string) => ({ toString: () => `id-${name}` }),

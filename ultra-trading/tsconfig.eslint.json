@@ -1,0 +1,56 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Ensure that nobody can accidentally use this config for a build
+    "noEmit": true,
+    
+    // Allow JavaScript files for mixed codebase linting
+    "allowJs": true,
+    "checkJs": false,
+    
+    // Include React JSX for client examples
+    "jsx": "react",
+    "lib": ["ES2022", "WebWorker", "DOM", "DOM.Iterable"],
+    
+    // More flexible for linting
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    // Core application files
+    "src/**/*",
+    
+    // Test files
+    "tests/**/*",
+    
+    // Database migrations
+    "migrations/**/*",
+    
+    // Scripts and tooling
+    "scripts/**/*",
+    
+    // Client examples (React components)
+    "client-examples/**/*",
+    
+    // Configuration files at root
+    "*.ts",
+    "*.js",
+    "*.mjs",
+    "*.cjs",
+    
+    // Type definitions
+    "src/types/cloudflare-globals.d.ts",
+    "worker-configuration.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".wrangler",
+    "coverage",
+    "**/*.min.js",
+    "**/*.sql"
+  ]
+}

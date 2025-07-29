@@ -29,8 +29,8 @@ interface ScheduledBacktest {
 export class BacktestScheduler {
   private state: DurableObjectState;
   private env: CloudflareBindings;
-  private schedules: Map<string, ScheduledBacktest> = new Map();
-  private activeBacktests: Map<string, AbortController> = new Map();
+  private schedules = new Map<string, ScheduledBacktest>();
+  private activeBacktests = new Map<string, AbortController>();
 
   constructor(state: DurableObjectState, env: CloudflareBindings) {
     this.state = state;
@@ -117,7 +117,7 @@ export class BacktestScheduler {
   }
 
   private async createSchedule(request: Request): Promise<Response> {
-    const data = await request.json() as ScheduledBacktest;
+    const data = await request.json();
     
     // Generate ID if not provided
     if (!data.id) {
@@ -141,9 +141,9 @@ export class BacktestScheduler {
   }
 
   private async updateSchedule(request: Request): Promise<Response> {
-    const { id, ...updates } = await request.json() as Partial<ScheduledBacktest>;
+    const { id, ...updates } = await request.json();
     
-    const schedule = this.schedules.get(id!);
+    const schedule = this.schedules.get(id);
     if (!schedule) {
       return new Response('Schedule not found', { status: 404 });
     }
@@ -165,7 +165,7 @@ export class BacktestScheduler {
   }
 
   private async deleteSchedule(request: Request): Promise<Response> {
-    const { id } = await request.json() as { id: string };
+    const { id } = await request.json();
     
     if (!this.schedules.has(id)) {
       return new Response('Schedule not found', { status: 404 });
@@ -187,10 +187,7 @@ export class BacktestScheduler {
   }
 
   private async runBacktest(request: Request): Promise<Response> {
-    const { scheduleId, immediate } = await request.json() as {
-      scheduleId?: string;
-      immediate?: boolean;
-    };
+    const { scheduleId, immediate } = await request.json();
     
     if (scheduleId) {
       const schedule = this.schedules.get(scheduleId);
@@ -427,7 +424,7 @@ export class BacktestScheduler {
     await this.state.storage.put(key, existing);
   }
 
-  private async getScheduleResults(scheduleId: string, limit: number = 10): Promise<any[]> {
+  private async getScheduleResults(scheduleId: string, limit = 10): Promise<any[]> {
     const key = `results:${scheduleId}`;
     const results = await this.state.storage.get<any[]>(key) || [];
     

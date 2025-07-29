@@ -25,7 +25,7 @@ interface BatchRerankRequest {
 
 export class RetrievalOptimizerService {
   private logger: ReturnType<typeof createLogger>;
-  private rerankingCache: Map<string, RerankingResult[]> = new Map();
+  private rerankingCache = new Map<string, RerankingResult[]>();
 
   constructor(private env: CloudflareBindings) {
     this.logger = createLogger({ env } as any);
@@ -86,7 +86,7 @@ export class RetrievalOptimizerService {
         temperature: 0.1 // Low temperature for consistent ranking
       });
 
-      return this.parseRerankingResponse((response as any).response || '', request.results);
+      return this.parseRerankingResponse((response).response || '', request.results);
     } catch (error) {
       this.logger.error('Batch reranking failed', { error });
       // Return original scores if AI fails
@@ -147,16 +147,16 @@ Example: [{"index": 2, "score": 0.95}, {"index": 0, "score": 0.8}, ...]`;
   ): RerankingResult[] {
     try {
       // Extract JSON from response
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      const jsonMatch = /\[[\s\S]*\]/.exec(response);
       if (!jsonMatch) {
         throw new Error('No JSON found in response');
       }
 
-      const rankings = JSON.parse(jsonMatch[0]) as Array<{
+      const rankings = JSON.parse(jsonMatch[0]) as {
         index: number;
         score: number;
         explanation?: string;
-      }>;
+      }[];
 
       return rankings.map(ranking => {
         const original = originalResults[ranking.index];
@@ -188,7 +188,7 @@ Example: [{"index": 2, "score": 0.95}, {"index": 0, "score": 0.8}, ...]`;
   async rerankWithExplanations(
     query: string,
     results: RetrievalResult[]
-  ): Promise<Array<RetrievalResult & { explanation: string }>> {
+  ): Promise<(RetrievalResult & { explanation: string })[]> {
     const rerankingResults = await this.rerankBatch({
       query,
       results,
@@ -244,12 +244,12 @@ Example: [{"index": 2, "score": 0.95}, {"index": 0, "score": 0.8}, ...]`;
    * Optimize retrieval pipeline based on performance metrics
    */
   async optimizePipeline(
-    historicalPerformance: Array<{
+    historicalPerformance: {
       query: string;
       retrievalMethod: string;
       successRate: number;
       avgLatency: number;
-    }>
+    }[]
   ): Promise<{
     recommendedConfig: {
       useContextualEmbeddings: boolean;

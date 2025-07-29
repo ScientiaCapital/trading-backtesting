@@ -22,20 +22,20 @@ import { CloudflareBindings } from '@/types';
 
 interface RiskAnalysisResponse {
   portfolioRisk: number;
-  positionRisks: Array<{
+  positionRisks: {
     symbol: string;
     risk: number;
     exposure: number;
     var95: number;
     recommendation: string;
-  }>;
+  }[];
   correlationRisk: number;
   maxDrawdownRisk: number;
-  alerts: Array<{
+  alerts: {
     level: 'INFO' | 'WARNING' | 'CRITICAL';
     message: string;
     action?: string;
-  }>;
+  }[];
   overallRecommendation: RiskRecommendation;
   reasoning: string;
 }
@@ -52,12 +52,12 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
   private readonly DAILY_PROFIT_TARGET = 300; // $300 daily profit target
   
   // Live Strategy Tuner properties
-  private tradeHistory: Array<{
+  private tradeHistory: {
     symbol: string;
     action: string;
     pnl: number;
     timestamp: Date;
-  }> = [];
+  }[] = [];
   private consecutiveLosses = 0;
   private currentMarketRegime: 'momentum' | 'mean_reversion' = 'momentum';
   private strategyPaused = false;
@@ -191,7 +191,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
             )
           ]);
           
-          response = JSON.parse((result as any).response || '{}') as RiskAnalysisResponse;
+          response = JSON.parse((result).response || '{}') as RiskAnalysisResponse;
         } catch (error) {
           this.logger.warn('AI call failed, using calculated metrics', { error: (error as Error).message });
           response = this.calculateRiskMetrics(positions, proposedTrade);

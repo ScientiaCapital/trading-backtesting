@@ -53,7 +53,7 @@ export const createErrorResponse = (
 export const createError = (
   code: string,
   message: string,
-  details?: Record<string, unknown> | undefined
+  details?: Record<string, unknown>  
 ): ApiError => ({
   code,
   message,
@@ -68,7 +68,7 @@ export class AppError extends Error {
   constructor(
     code: string,
     message: string,
-    statusCode: number = 500,
+    statusCode = 500,
     details?: Record<string, unknown>
   ) {
     super(message);
@@ -86,25 +86,25 @@ export class ValidationError extends AppError {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message: string = 'Authentication required') {
+  constructor(message = 'Authentication required') {
     super('AUTHENTICATION_ERROR', message, 401);
   }
 }
 
 export class AuthorizationError extends AppError {
-  constructor(message: string = 'Insufficient permissions') {
+  constructor(message = 'Insufficient permissions') {
     super('AUTHORIZATION_ERROR', message, 403);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(resource: string = 'Resource') {
+  constructor(resource = 'Resource') {
     super('NOT_FOUND', `${resource} not found`, 404);
   }
 }
 
 export class RateLimitError extends AppError {
-  constructor(message: string = 'Rate limit exceeded') {
+  constructor(message = 'Rate limit exceeded') {
     super('RATE_LIMIT_EXCEEDED', message, 429);
   }
 }
@@ -216,13 +216,13 @@ export const roundToDecimals = (num: number, decimals: number): number => {
 
 export const formatCurrency = (
   amount: number,
-  currency: string = 'USD'
+  currency = 'USD'
 ): string => new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency
   }).format(amount);
 
-export const formatPercentage = (value: number, decimals: number = 2): string => `${(value * 100).toFixed(decimals)}%`;
+export const formatPercentage = (value: number, decimals = 2): string => `${(value * 100).toFixed(decimals)}%`;
 
 /**
  * Array Utilities
@@ -255,8 +255,8 @@ export const sleep = (ms: number): Promise<void> => new Promise(resolve => globa
 
 export const retry = async <T>(
   fn: () => Promise<T>,
-  maxAttempts: number = 3,
-  delay: number = 1000
+  maxAttempts = 3,
+  delay = 1000
 ): Promise<T> => {
   let lastError: Error = new Error('Retry failed');
   
@@ -340,14 +340,14 @@ export const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-export const generateSecureToken = (length: number = 32): string => nanoid(length);
+export const generateSecureToken = (length = 32): string => nanoid(length);
 
 /**
  * Trading Specific Utilities
  */
 export const calculateSharpeRatio = (
   returns: number[],
-  riskFreeRate: number = 0.02
+  riskFreeRate = 0.02
 ): number => {
   if (returns.length === 0) return 0;
   

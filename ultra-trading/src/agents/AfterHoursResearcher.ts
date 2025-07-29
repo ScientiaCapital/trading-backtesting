@@ -255,7 +255,7 @@ export class AfterHoursResearcher extends AIAgent {
         // This is simplified - in production, match buy/sell pairs
         const trade: TradeDetail = {
           symbol: order.symbol,
-          side: order.side as 'buy' | 'sell',
+          side: order.side,
           quantity: parseFloat(order.filled_qty),
           entryPrice: parseFloat(order.filled_avg_price),
           exitPrice: parseFloat(order.filled_avg_price), // Would need exit order
@@ -446,7 +446,7 @@ export class AfterHoursResearcher extends AIAgent {
       const analysis = await this.callAIModel(prompt);
 
       return analysis;
-    } catch (error) {
+    } catch {
       return 'Market outlook analysis unavailable';
     }
   }

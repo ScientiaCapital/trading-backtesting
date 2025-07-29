@@ -131,13 +131,11 @@ export interface BacktestTrade {
  */
 export interface GridSearchConfig {
   strategy: BacktestStrategy;
-  parameterRanges: {
-    [key: string]: {
+  parameterRanges: Record<string, {
       min: number;
       max: number;
       step: number;
-    };
-  };
+    }>;
   metric: 'sharpe' | 'return' | 'winRate' | 'profitFactor';
 }
 
@@ -147,22 +145,22 @@ export interface GridSearchConfig {
 export interface GridSearchResult {
   bestParameters: Record<string, any>;
   bestMetric: number;
-  allResults: Array<{
+  allResults: {
     parameters: Record<string, any>;
     metric: number;
     result: BacktestMetrics;
-  }>;
+  }[];
 }
 
 /**
  * Multi-asset backtest configuration
  */
 export interface MultiAssetBacktestConfig {
-  assets: Array<{
+  assets: {
     symbol: string;
     allocation: number;
     assetClass: 'stock' | 'crypto' | 'option';
-  }>;
+  }[];
   rebalanceFrequency: 'daily' | 'weekly' | 'monthly' | 'quarterly';
   startDate: string;
   endDate: string;
@@ -213,7 +211,7 @@ export interface DataConverter {
   alpacaBarsToOHLCV(bars: AlpacaBar[]): OHLCVData;
   ohlcvToDataFrame(data: OHLCVData): {
     columns: string[];
-    data: Array<Record<string, string | number>>;
+    data: Record<string, string | number>[];
     index: string[];
   };
 }

@@ -94,7 +94,7 @@ export interface PaginatedResponse<T> {
  */
 export class AlpacaMarketData {
   private client: AlpacaClient;
-  private cache: Map<string, any> = new Map();
+  private cache = new Map<string, any>();
 
   constructor(
     env: CloudflareBindings,

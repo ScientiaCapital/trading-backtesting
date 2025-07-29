@@ -167,7 +167,7 @@ async function main() {
         `Applying schema to ${db.name}`,
         true
       );
-    } catch (error) {
+    } catch {
       console.log(`⚠️  Schema application failed for ${db.name} - you can run this manually later`);
     }
   }

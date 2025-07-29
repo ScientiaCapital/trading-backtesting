@@ -31,9 +31,9 @@ export class AgentCoordinator {
   private storage: DurableObjectStorage;
   private env: CloudflareBindings;
   
-  private agents: Map<AgentType, IAgent> = new Map();
+  private agents = new Map<AgentType, IAgent>();
   private messageQueue: AgentMessage[] = [];
-  private activeDecisions: Map<string, TradingDecision> = new Map();
+  private activeDecisions = new Map<string, TradingDecision>();
   private config: CoordinatorConfig;
   private fastDecisionService: FastDecisionService;
   
@@ -52,7 +52,7 @@ export class AgentCoordinator {
     this.fastDecisionService = new FastDecisionService(env);
     
     // Initialize coordinator on first request
-    this.state.blockConcurrencyWhile(async () => {
+    void this.state.blockConcurrencyWhile(async () => {
       await this.initialize();
     });
   }
@@ -177,7 +177,7 @@ export class AgentCoordinator {
    * Handle incoming message
    */
   private async handleMessage(request: Request): Promise<Response> {
-    const message = await request.json() as AgentMessage;
+    const message = await request.json();
     
     // Add to queue
     this.messageQueue.push(message);
@@ -212,7 +212,7 @@ export class AgentCoordinator {
       }
     } else {
       // Send to specific agent
-      const agent = this.agents.get(message.to as AgentType);
+      const agent = this.agents.get(message.to);
       if (agent) {
         const response = await agent.process(message);
         if (response) {
@@ -229,10 +229,7 @@ export class AgentCoordinator {
    * Make a trading decision
    */
   private async makeDecision(request: Request): Promise<Response> {
-    const { context, useQuickDecision = true } = await request.json() as { 
-      context: any; 
-      useQuickDecision?: boolean;
-    };
+    const { context, useQuickDecision = true } = await request.json();
     
     const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -328,11 +325,11 @@ export class AgentCoordinator {
         ]);
       } else {
         // Send to specific agent
-        const agent = this.agents.get(message.to as AgentType);
+        const agent = this.agents.get(message.to);
         if (agent) {
           const response = await agent.process(message);
           if (response?.payload) {
-            responses.set(message.to as AgentType, response.payload);
+            responses.set(message.to, response.payload);
           }
         }
       }

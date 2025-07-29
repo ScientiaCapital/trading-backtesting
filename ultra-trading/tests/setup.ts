@@ -45,10 +45,10 @@ beforeAll(() => {
   }
 
   // Mock console methods to reduce test noise
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'info').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'log').mockImplementation(() => { /* Mock implementation */ });
+  vi.spyOn(console, 'info').mockImplementation(() => { /* Mock implementation */ });
+  vi.spyOn(console, 'warn').mockImplementation(() => { /* Mock implementation */ });
+  vi.spyOn(console, 'error').mockImplementation(() => { /* Mock implementation */ });
 });
 
 // Reset mocks before each test

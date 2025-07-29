@@ -68,7 +68,7 @@ export type HonoContext = Context<{
   };
 }>;
 
-export type ApiContext = {
+export interface ApiContext {
   Bindings: CloudflareBindings;
   Variables: {
     userId?: string;
@@ -76,7 +76,7 @@ export type ApiContext = {
     requestId: string;
     startTime: number;
   };
-};
+}
 
 /**
  * Trading Strategy Types

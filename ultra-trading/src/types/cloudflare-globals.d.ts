@@ -12,9 +12,7 @@ declare global {
     1: WebSocket;
   }
   
-  const WebSocketPair: {
-    new(): WebSocketPair;
-  };
+  const WebSocketPair: new() => WebSocketPair;
 
   // Durable Object types
   interface DurableObjectStub {

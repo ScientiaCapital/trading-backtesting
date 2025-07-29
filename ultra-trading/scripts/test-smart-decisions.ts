@@ -142,14 +142,7 @@ async function testDecision(scenario: any): Promise<void> {
       })
     });
     
-    const decision = await response.json() as {
-      action: string;
-      confidence: number;
-      reasoning: string;
-      stopLoss?: number;
-      takeProfit?: number;
-      metadata?: any;
-    };
+    const decision = await response.json();
     const elapsed = Date.now() - startTime;
     
     console.log(`⏱️  Response Time: ${elapsed}ms`);

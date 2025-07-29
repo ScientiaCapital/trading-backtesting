@@ -52,8 +52,8 @@ interface OptionsFlowMetrics {
 export class OptionsFlowAnalyst extends BaseAgent {
   private alpacaClient!: AlpacaClient;
   private watchlist = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA'];
-  private flowCache: Map<string, OptionsFlowSignal[]> = new Map();
-  private metricsCache: Map<string, OptionsFlowMetrics> = new Map();
+  private flowCache = new Map<string, OptionsFlowSignal[]>();
+  private metricsCache = new Map<string, OptionsFlowMetrics>();
   
   // 0DTE thresholds
   private readonly VOLUME_SPIKE_THRESHOLD = 3.0; // 3x average volume

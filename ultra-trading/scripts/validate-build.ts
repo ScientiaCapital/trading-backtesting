@@ -21,7 +21,7 @@ class BuildValidator {
   async validate(): Promise<boolean> {
     console.log('🔍 Starting build validation...\n');
 
-    const checks: Array<() => Promise<ValidationResult>> = [
+    const checks: (() => Promise<ValidationResult>)[] = [
       this.checkWranglerConfig.bind(this),
       this.checkDurableObjectExports.bind(this),
       this.checkTypeScript.bind(this),
@@ -109,7 +109,7 @@ class BuildValidator {
     try {
       execSync('npm run build', { stdio: 'pipe' });
       return { passed: true, message: 'TypeScript compilation successful' };
-    } catch (error) {
+    } catch {
       return { passed: false, message: 'TypeScript compilation failed' };
     }
   }
@@ -120,7 +120,7 @@ class BuildValidator {
     try {
       execSync('npm run lint:check', { stdio: 'pipe' });
       return { passed: true, message: 'ESLint check passed' };
-    } catch (error) {
+    } catch {
       this.warnings.push('ESLint found issues - fix with: npm run lint');
       return { passed: true, message: 'ESLint check completed with warnings' };
     }
@@ -132,7 +132,7 @@ class BuildValidator {
     try {
       execSync('npm test', { stdio: 'pipe' });
       return { passed: true, message: 'All tests passed' };
-    } catch (error) {
+    } catch {
       return { passed: false, message: 'Tests failed' };
     }
   }
@@ -154,7 +154,7 @@ class BuildValidator {
     try {
       execSync('npx wrangler deploy --dry-run', { stdio: 'pipe' });
       return { passed: true, message: 'Deployment dry run successful' };
-    } catch (error) {
+    } catch {
       return { passed: false, message: 'Deployment dry run failed' };
     }
   }

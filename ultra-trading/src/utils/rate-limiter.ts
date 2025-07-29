@@ -9,7 +9,7 @@ export interface RateLimiterConfig {
 }
 
 export class RateLimiter {
-  private requests: Map<string, number[]> = new Map();
+  private requests = new Map<string, number[]>();
   private config: RateLimiterConfig;
 
   constructor(config: RateLimiterConfig) {

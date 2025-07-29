@@ -60,9 +60,9 @@ interface SupportResistanceLevel {
 
 export class IntradayPatternEngine {
   private logger: ReturnType<typeof createLogger>;
-  private openingRanges: Map<string, OpeningRange> = new Map();
-  private supportResistanceLevels: Map<string, SupportResistanceLevel[]> = new Map();
-  private patternCache: Map<string, IntradayPattern[]> = new Map();
+  private openingRanges = new Map<string, OpeningRange>();
+  private supportResistanceLevels = new Map<string, SupportResistanceLevel[]>();
+  private patternCache = new Map<string, IntradayPattern[]>();
   
   // Pattern detection thresholds
   private readonly BREAKOUT_VOLUME_MULTIPLIER = 2.5;
@@ -496,7 +496,7 @@ export class IntradayPatternEngine {
    */
   private updateSupportResistanceLevels(symbol: string, bars: MarketBar[]): void {
     const levels: SupportResistanceLevel[] = [];
-    const pricePoints: Map<number, number> = new Map();
+    const pricePoints = new Map<number, number>();
 
     // Round prices to nearest 0.10 for clustering
     bars.forEach(bar => {
@@ -559,7 +559,7 @@ export class IntradayPatternEngine {
   /**
    * Calculate RSI from market data
    */
-  private calculateRSI(marketData: MarketData[], period: number = 14): number | null {
+  private calculateRSI(marketData: MarketData[], period = 14): number | null {
     if (marketData.length < period + 1) return null;
 
     let gains = 0;
@@ -599,7 +599,7 @@ export class IntradayPatternEngine {
   /**
    * Calculate ATR (Average True Range)
    */
-  private calculateATR(bars: MarketBar[], period: number = 14): number {
+  private calculateATR(bars: MarketBar[], period = 14): number {
     if (bars.length < period + 1) return 0;
 
     const trueRanges: number[] = [];

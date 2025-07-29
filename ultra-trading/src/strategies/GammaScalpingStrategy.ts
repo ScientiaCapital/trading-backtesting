@@ -59,7 +59,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
   private readonly marketData: MarketDataService;
   // @ts-ignore - Reserved for future Greeks calculations
   private readonly _bsEngine: BlackScholesEngine;
-  private positions: Map<string, GammaPosition> = new Map();
+  private positions = new Map<string, GammaPosition>();
   private config: GammaScalpingConfig;
 
   constructor(

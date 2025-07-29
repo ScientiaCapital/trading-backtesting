@@ -300,7 +300,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
           }
         );
         
-        const analysis = JSON.parse((result as any).response || '{}') as PerformanceAnalysisResponse;
+        const analysis = JSON.parse((result).response || '{}') as PerformanceAnalysisResponse;
         
         // Log insights
         this.logger.info('Performance insights generated', {

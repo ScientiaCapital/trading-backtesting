@@ -49,7 +49,7 @@ export class ExecutionAgent extends BaseAgent {
   private readonly EXECUTION_TIMEOUT = 30000; // 30 seconds timeout
   
   // Execution tracking
-  private activeOrders: Map<string, Order> = new Map();
+  private activeOrders = new Map<string, Order>();
   private executionMetrics = {
     totalOrders: 0,
     filledOrders: 0,
@@ -91,7 +91,7 @@ export class ExecutionAgent extends BaseAgent {
 
   protected async handleMessage(message: AgentMessage): Promise<AgentMessage | null> {
     switch (message.type) {
-      case MessageType.EXECUTION_REQUEST:
+      case MessageType.EXECUTION_REQUEST: {
         const decision = message.payload as TradingDecision;
         
         // Execute the trading decision
@@ -108,8 +108,9 @@ export class ExecutionAgent extends BaseAgent {
           },
           MessagePriority.HIGH
         );
+      }
         
-      case MessageType.RISK_ALERT:
+      case MessageType.RISK_ALERT: {
         // Handle risk alerts by potentially canceling orders
         const { recommendation } = message.payload as any;
         
@@ -126,6 +127,7 @@ export class ExecutionAgent extends BaseAgent {
         }
         
         return null;
+      }
         
       default:
         this.logger.debug('Ignoring message type', { type: message.type });

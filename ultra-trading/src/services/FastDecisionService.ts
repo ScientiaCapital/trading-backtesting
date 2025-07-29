@@ -43,7 +43,7 @@ interface MarketContext {
 }
 
 export class FastDecisionService {
-  private signalCache: Map<string, FastSignal> = new Map();
+  private signalCache = new Map<string, FastSignal>();
   private readonly CACHE_TTL = 3000; // 3 seconds - shorter for more dynamic decisions
   private readonly DECISION_TIMEOUT = 100; // 100ms max decision time
   
@@ -103,7 +103,7 @@ export class FastDecisionService {
     marketData: MarketSnapshot[],
     positions: Position[],
     dailyPnL: number,
-    accountValue: number = 100000
+    accountValue = 100000
   ): Promise<TradingDecision> {
     const startTime = Date.now();
     

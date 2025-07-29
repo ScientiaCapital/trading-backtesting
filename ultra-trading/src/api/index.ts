@@ -56,7 +56,7 @@ healthRoutes.get('/health', async (c) => {
   const httpStatus = status.status === 'healthy' ? 200 : 
                     status.status === 'degraded' ? 200 : 503;
   
-  return c.json(createApiResponse(status), httpStatus as 200 | 503);
+  return c.json(createApiResponse(status), httpStatus);
 });
 
 /**
@@ -118,7 +118,7 @@ authRoutes.post('/login', async (c) => {
       return c.json(createErrorResponse(createError(error.code, error.message)), error.statusCode as 401);
     }
     
-    return c.json(createErrorResponse(createError('LOGIN_ERROR', 'Login failed')), 500 as 500);
+    return c.json(createErrorResponse(createError('LOGIN_ERROR', 'Login failed')), 500 as const);
   }
 });
 
@@ -158,7 +158,7 @@ strategyRoutes.get('/', async (c) => {
     
   } catch (error) {
     logger.error('Failed to get strategies', { error: (error as Error).message });
-    return c.json(createErrorResponse(createError('DATABASE_ERROR', 'Failed to retrieve strategies')), 500 as 500);
+    return c.json(createErrorResponse(createError('DATABASE_ERROR', 'Failed to retrieve strategies')), 500 as const);
   }
 });
 
@@ -193,10 +193,10 @@ strategyRoutes.post('/', requireRole(['admin', 'trader']), async (c) => {
     logger.error('Failed to create strategy', { error: (error as Error).message });
     
     if (error instanceof ValidationError) {
-      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as 400);
+      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as const);
     }
     
-    return c.json(createErrorResponse(createError('STRATEGY_CREATE_ERROR', 'Failed to create strategy')), 500 as 500);
+    return c.json(createErrorResponse(createError('STRATEGY_CREATE_ERROR', 'Failed to create strategy')), 500 as const);
   }
 });
 
@@ -230,10 +230,10 @@ marketDataRoutes.get('/price/:symbol', async (c) => {
     logger.error('Failed to get price', { symbol, error: (error as Error).message });
     
     if (error instanceof NotFoundError) {
-      return c.json(createErrorResponse(createError(error.code, error.message)), 404 as 404);
+      return c.json(createErrorResponse(createError(error.code, error.message)), 404 as const);
     }
     
-    return c.json(createErrorResponse(createError('PRICE_ERROR', 'Failed to retrieve price')), 500 as 500);
+    return c.json(createErrorResponse(createError('PRICE_ERROR', 'Failed to retrieve price')), 500 as const);
   }
 });
 
@@ -269,10 +269,10 @@ marketDataRoutes.get('/historical/:symbol', async (c) => {
     logger.error('Failed to get historical data', { symbol, error: (error as Error).message });
     
     if (error instanceof ValidationError) {
-      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as 400);
+      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as const);
     }
     
-    return c.json(createErrorResponse(createError('HISTORICAL_DATA_ERROR', 'Failed to retrieve historical data')), 500 as 500);
+    return c.json(createErrorResponse(createError('HISTORICAL_DATA_ERROR', 'Failed to retrieve historical data')), 500 as const);
   }
 });
 
@@ -336,10 +336,10 @@ backtestRoutes.post('/', requireRole(['admin', 'trader']), async (c) => {
     logger.error('Backtest failed', { error: (error as Error).message });
     
     if (error instanceof ValidationError) {
-      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as 400);
+      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as const);
     }
     
-    return c.json(createErrorResponse(createError('BACKTEST_ERROR', 'Failed to run backtest')), 500 as 500);
+    return c.json(createErrorResponse(createError('BACKTEST_ERROR', 'Failed to run backtest')), 500 as const);
   }
 });
 
@@ -362,10 +362,10 @@ backtestRoutes.get('/:id', async (c) => {
     logger.error('Failed to get backtest result', { id, error: (error as Error).message });
     
     if (error instanceof NotFoundError) {
-      return c.json(createErrorResponse(createError(error.code, error.message)), 404 as 404);
+      return c.json(createErrorResponse(createError(error.code, error.message)), 404 as const);
     }
     
-    return c.json(createErrorResponse(createError('BACKTEST_GET_ERROR', 'Failed to retrieve backtest result')), 500 as 500);
+    return c.json(createErrorResponse(createError('BACKTEST_GET_ERROR', 'Failed to retrieve backtest result')), 500 as const);
   }
 });
 
@@ -406,10 +406,10 @@ aiRoutes.post('/analyze', requireRole(['admin', 'trader']), async (c) => {
     logger.error('AI analysis failed', { error: (error as Error).message });
     
     if (error instanceof ValidationError) {
-      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as 400);
+      return c.json(createErrorResponse(createError(error.code, error.message, error.details)), 400 as const);
     }
     
-    return c.json(createErrorResponse(createError('AI_ANALYSIS_ERROR', 'Failed to analyze strategy')), 500 as 500);
+    return c.json(createErrorResponse(createError('AI_ANALYSIS_ERROR', 'Failed to analyze strategy')), 500 as const);
   }
 });
 

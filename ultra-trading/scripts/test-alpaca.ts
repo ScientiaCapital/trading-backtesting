@@ -120,7 +120,7 @@ async function testAlpacaConnection(): Promise<void> {
         contracts.option_contracts.forEach((contract: any) => {
           console.log(`  - ${contract.symbol}: Strike $${contract.strike_price} Exp ${contract.expiration_date}`);
         });
-      } catch (error) {
+      } catch {
         console.log('⚠️  Options API not available or not authorized');
       }
     } else {
