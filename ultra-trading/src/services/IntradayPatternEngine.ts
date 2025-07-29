@@ -73,7 +73,7 @@ export class IntradayPatternEngine {
   private readonly RSI_OVERBOUGHT = 80;
   private readonly MIN_PATTERN_CONFIDENCE = 0.65;
 
-  constructor(private env: CloudflareBindings) {
+  constructor(env: CloudflareBindings) {
     this.logger = createLogger({ env } as any);
   }
 
@@ -101,7 +101,7 @@ export class IntradayPatternEngine {
         this.detectOpeningRangeBreakout(symbol, bars),
         this.detectVWAPBands(symbol, marketData, bars),
         this.detectMomentumIgnition(symbol, marketData, bars),
-        this.detectMeanReversion(symbol, marketData),
+        this.detectMeanReversion(symbol, marketData, bars),
         this.detectSupportResistance(symbol, bars)
       ]);
 
@@ -112,7 +112,7 @@ export class IntradayPatternEngine {
         momentum,
         meanReversion,
         supportResistance
-      ].filter(p => p && p.confidence >= this.MIN_PATTERN_CONFIDENCE);
+      ].filter((p): p is IntradayPattern => p !== null && p.confidence >= this.MIN_PATTERN_CONFIDENCE);
 
       patterns.push(...allPatterns);
 
@@ -144,7 +144,7 @@ export class IntradayPatternEngine {
     // Get or establish opening range
     let range = this.openingRanges.get(symbol);
     
-    if (!range || !range.established) {
+    if (!range?.established) {
       // Calculate opening range from first 30 minutes
       const openingBars = bars.filter(bar => {
         const barTime = new Date(bar.timestamp);
@@ -240,8 +240,8 @@ export class IntradayPatternEngine {
 
     // Calculate VWAP
     const vwap = this.calculateVWAP(bars);
-    const currentPrice = marketData[0].close;
-    const deviation = (currentPrice - vwap) / vwap;
+    const currentPrice = marketData[0]?.close;
+    if (!currentPrice) return null;
 
     // Calculate bands
     const upperBand = vwap * (1 + this.VWAP_BAND_WIDTH);
@@ -300,7 +300,7 @@ export class IntradayPatternEngine {
    */
   private async detectMomentumIgnition(
     symbol: string,
-    marketData: MarketData[],
+    _marketData: MarketData[],
     bars: MarketBar[]
   ): Promise<IntradayPattern | null> {
     if (bars.length < 10) return null;
@@ -308,13 +308,17 @@ export class IntradayPatternEngine {
     const currentBar = bars[bars.length - 1];
     const prevBars = bars.slice(-10, -1);
     
+    if (!currentBar || prevBars.length === 0) return null;
+    
     // Calculate average volume
     const avgVolume = prevBars.reduce((sum, b) => sum + b.volume, 0) / prevBars.length;
     const volumeRatio = currentBar.volume / avgVolume;
 
     // Calculate price move
-    const priceMove = (currentBar.close - prevBars[prevBars.length - 1].close) / 
-                     prevBars[prevBars.length - 1].close;
+    const lastPrevBar = prevBars[prevBars.length - 1];
+    if (!lastPrevBar) return null;
+    
+    const priceMove = (currentBar.close - lastPrevBar.close) / lastPrevBar.close;
 
     // Check for momentum ignition
     if (Math.abs(priceMove) > this.MOMENTUM_PRICE_THRESHOLD && 
@@ -356,10 +360,13 @@ export class IntradayPatternEngine {
     marketData: MarketData[]
   ): Promise<IntradayPattern | null> {
     const current = marketData[0];
-    if (!current.indicators?.rsi) return null;
+    if (!current) return null;
 
-    const rsi = current.indicators.rsi;
-    const price = current.close;
+    // Calculate RSI from recent price data
+    const rsi = this.calculateRSI(marketData);
+    if (!rsi) return null;
+    
+    const price = current.close || current.price;
 
     // Oversold bounce
     if (rsi < this.RSI_OVERSOLD) {
@@ -529,6 +536,37 @@ export class IntradayPatternEngine {
   }
 
   /**
+   * Calculate RSI from market data
+   */
+  private calculateRSI(marketData: MarketData[], period: number = 14): number | null {
+    if (marketData.length < period + 1) return null;
+
+    let gains = 0;
+    let losses = 0;
+
+    // Calculate initial average gain/loss
+    for (let i = 1; i <= period; i++) {
+      const change = (marketData[i].close || marketData[i].price) - 
+                    (marketData[i - 1].close || marketData[i - 1].price);
+      if (change > 0) {
+        gains += change;
+      } else {
+        losses += Math.abs(change);
+      }
+    }
+
+    const avgGain = gains / period;
+    const avgLoss = losses / period;
+
+    if (avgLoss === 0) return 100; // No losses = RSI 100
+
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+
+    return rsi;
+  }
+
+  /**
    * Calculate ATR (Average True Range)
    */
   private calculateATR(bars: MarketBar[], period: number = 14): number {
@@ -537,8 +575,8 @@ export class IntradayPatternEngine {
     const trueRanges: number[] = [];
     
     for (let i = 1; i < bars.length; i++) {
-      const high = bars[i].high;
-      const low = bars[i].low;
+      const {high} = bars[i];
+      const {low} = bars[i];
       const prevClose = bars[i - 1].close;
       
       const tr = Math.max(

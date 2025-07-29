@@ -38,6 +38,15 @@ export interface AssetBar {
   vwap?: number;
 }
 
+export interface OrderMetadata {
+  strategy?: string;
+  entryReason?: string;
+  stopLossPrice?: number;
+  takeProfitPrice?: number;
+  signalId?: string;
+  agentId?: string;
+}
+
 export interface AssetOrder {
   symbol: string;
   assetClass: AssetClass;
@@ -47,13 +56,23 @@ export interface AssetOrder {
   limitPrice?: number;
   stopPrice?: number;
   timeInForce: 'day' | 'gtc' | 'ioc' | 'fok';
-  metadata?: Record<string, any>;
+  metadata?: OrderMetadata;
+}
+
+export interface OrderResult {
+  id: string;
+  symbol: string;
+  status: 'pending' | 'accepted' | 'filled' | 'rejected' | 'cancelled';
+  filledQty?: number;
+  filledPrice?: number;
+  createdAt: Date;
+  message?: string;
 }
 
 interface Connector {
   getQuote(symbol: string): Promise<AssetQuote>;
   getBars(symbol: string, timeframe: string, limit: number): Promise<AssetBar[]>;
-  submitOrder(order: AssetOrder): Promise<any>;
+  submitOrder(order: AssetOrder): Promise<OrderResult>;
   isAvailable(): boolean;
   getTradingHours(): { start: string; end: string; timezone: string };
 }
@@ -69,8 +88,17 @@ class AlpacaCryptoConnector implements Connector {
 
   async getQuote(symbol: string): Promise<AssetQuote> {
     try {
-      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`);
-      const q = (quote as any).quote;
+      interface CryptoQuoteResponse {
+        quote: {
+          bp: number;  // bid price
+          ap: number;  // ask price
+          s?: number;  // size
+          t: string;   // timestamp
+          x: string;   // exchange
+        };
+      }
+      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`) as CryptoQuoteResponse;
+      const q = quote.quote;
       
       return {
         symbol,
@@ -88,18 +116,29 @@ class AlpacaCryptoConnector implements Connector {
     }
   }
 
-  async getBars(symbol: string, timeframe: string, limit: number): Promise<AssetBar[]> {
+  async getBars(symbol: string, _timeframe: string, _limit: number): Promise<AssetBar[]> {
     try {
+      interface CryptoBarsResponse {
+        bars: Array<{
+          o: number;   // open
+          h: number;   // high
+          l: number;   // low
+          c: number;   // close
+          v: number;   // volume
+          t: string;   // timestamp
+          vw?: number; // vwap
+        }>;
+      }
       const response = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/bars`, {
         queryParams: {
-          timeframe,
-          limit,
+          timeframe: _timeframe,
+          limit: _limit,
           asof: new Date().toISOString()
         }
-      });
+      }) as CryptoBarsResponse;
       
-      const bars = (response as any).bars || [];
-      return bars.map((bar: any) => ({
+      const bars = response.bars || [];
+      return bars.map((bar) => ({
         symbol,
         assetClass: AssetClass.CRYPTO,
         open: bar.o,
@@ -116,8 +155,8 @@ class AlpacaCryptoConnector implements Connector {
     }
   }
 
-  async submitOrder(order: AssetOrder): Promise<any> {
-    return this.alpacaClient.submitOrder({
+  async submitOrder(order: AssetOrder): Promise<OrderResult> {
+    const alpacaOrder = await this.alpacaClient.submitOrder({
       symbol: order.symbol,
       qty: order.quantity,
       side: order.side,
@@ -127,6 +166,16 @@ class AlpacaCryptoConnector implements Connector {
       stop_price: order.stopPrice,
       extended_hours: true // Crypto trades 24/7
     });
+    
+    return {
+      id: alpacaOrder.id,
+      symbol: alpacaOrder.symbol,
+      status: alpacaOrder.status as OrderResult['status'],
+      filledQty: alpacaOrder.filled_qty ? parseFloat(alpacaOrder.filled_qty) : undefined,
+      filledPrice: alpacaOrder.filled_avg_price ? parseFloat(alpacaOrder.filled_avg_price) : undefined,
+      createdAt: new Date(alpacaOrder.created_at),
+      message: alpacaOrder.rejected_reason
+    };
   }
 
   isAvailable(): boolean {
@@ -154,12 +203,12 @@ class ForexConnector implements Connector {
     throw new Error('Forex trading not yet implemented');
   }
 
-  async getBars(symbol: string, timeframe: string, limit: number): Promise<AssetBar[]> {
+  async getBars(symbol: string, _timeframe: string, _limit: number): Promise<AssetBar[]> {
     this.logger.warn('Forex connector not implemented', { symbol });
     throw new Error('Forex trading not yet implemented');
   }
 
-  async submitOrder(order: AssetOrder): Promise<any> {
+  async submitOrder(order: AssetOrder): Promise<OrderResult> {
     this.logger.warn('Forex connector not implemented', { order });
     throw new Error('Forex trading not yet implemented');
   }
@@ -189,12 +238,12 @@ class CommoditiesConnector implements Connector {
     throw new Error('Commodities trading not yet implemented');
   }
 
-  async getBars(symbol: string, timeframe: string, limit: number): Promise<AssetBar[]> {
+  async getBars(symbol: string, _timeframe: string, _limit: number): Promise<AssetBar[]> {
     this.logger.warn('Commodities connector not implemented', { symbol });
     throw new Error('Commodities trading not yet implemented');
   }
 
-  async submitOrder(order: AssetOrder): Promise<any> {
+  async submitOrder(order: AssetOrder): Promise<OrderResult> {
     this.logger.warn('Commodities connector not implemented', { order });
     throw new Error('Commodities trading not yet implemented');
   }
@@ -221,8 +270,8 @@ export class MultiAssetConnector {
   private logger: ReturnType<typeof createLogger>;
   private alpacaClient: AlpacaClient;
 
-  constructor(private env: CloudflareBindings, private requestId: string) {
-    this.logger = createLogger({ env } as any);
+  constructor(env: CloudflareBindings, requestId: string) {
+    this.logger = createLogger({ env, requestId } as any);
     this.alpacaClient = new AlpacaClient(env, requestId);
     
     // Initialize connectors
@@ -329,12 +378,12 @@ export class MultiAssetConnector {
   /**
    * Submit order for any asset
    */
-  async submitOrder(order: AssetOrder): Promise<any> {
+  async submitOrder(order: AssetOrder): Promise<OrderResult> {
     const assetClass = order.assetClass || this.getAssetClass(order.symbol);
     
     // Use Alpaca for stocks
     if (assetClass === AssetClass.STOCKS || assetClass === AssetClass.OPTIONS) {
-      return this.alpacaClient.submitOrder({
+      const alpacaOrder = await this.alpacaClient.submitOrder({
         symbol: order.symbol,
         qty: order.quantity,
         side: order.side,
@@ -343,6 +392,16 @@ export class MultiAssetConnector {
         limit_price: order.limitPrice,
         stop_price: order.stopPrice
       });
+      
+      return {
+        id: alpacaOrder.id,
+        symbol: alpacaOrder.symbol,
+        status: alpacaOrder.status as OrderResult['status'],
+        filledQty: alpacaOrder.filled_qty ? parseFloat(alpacaOrder.filled_qty) : undefined,
+        filledPrice: alpacaOrder.filled_avg_price ? parseFloat(alpacaOrder.filled_avg_price) : undefined,
+        createdAt: new Date(alpacaOrder.created_at),
+        message: alpacaOrder.rejected_reason
+      };
     }
     
     const connector = this.connectors.get(assetClass);

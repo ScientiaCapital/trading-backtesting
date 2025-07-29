@@ -12,6 +12,7 @@ export interface OptionContract {
   tradable: boolean;
   underlyingSymbol: string;
   underlyingAssetId: string;
+  underlyingPrice?: number; // Current price of underlying
   type: 'call' | 'put';
   style: 'american' | 'european';
   strikePrice: number;
@@ -25,10 +26,14 @@ export interface OptionContract {
   openInterest?: number;
   openInterestDate?: string;
   volume?: number;
+  lastPrice?: number; // Last traded price
 }
 
 export interface OptionChainRequest {
-  underlyingSymbol: string;
+  underlyingSymbols: string; // Note: plural for Alpaca API
+  underlyingSymbol?: string; // Singular for compatibility
+  expirationDate?: string;
+  type?: 'call' | 'put' | 'all';
   optionType?: 'call' | 'put';
   minStrike?: number;
   maxStrike?: number;

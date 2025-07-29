@@ -245,6 +245,18 @@ export interface AgentConfig {
 }
 
 /**
+ * Agent response type
+ */
+export interface AgentResponse {
+  success: boolean;
+  action?: TradingAction | string;
+  data?: unknown;
+  error?: string;
+  confidence?: number;
+  timestamp?: number;
+}
+
+/**
  * Agent interfaces
  */
 export interface IAgent {

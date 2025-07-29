@@ -64,7 +64,7 @@ tradingRoutes.get('/dashboard-status', async (c) => {
       },
       positions: {
         count: positions.length,
-        dailyPnL: dailyPnL,
+        dailyPnL,
         totalValue: positions.reduce((sum, pos) => sum + parseFloat(String(pos.marketValue || 0)), 0)
       },
       trading: {

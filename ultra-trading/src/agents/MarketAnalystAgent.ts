@@ -157,7 +157,7 @@ export class MarketAnalystAgent extends AIAgent implements IMarketAnalystAgent {
 
           const data = await apiResponse.json() as any;
           
-          if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+          if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
             const responseText = data.candidates[0].content.parts[0].text;
             try {
               response = JSON.parse(responseText) as GeminiAnalysisResponse;

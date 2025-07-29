@@ -17,7 +17,7 @@ import type {
   Asset,
   Calendar
 } from '../../types/trading';
-import type { OptionContract, OptionChainRequest } from '../../types/options';
+import type { OptionContract, OptionChainRequest, OptionQuote } from '../../types/options';
 
 /**
  * Alpaca API Configuration
@@ -539,6 +539,28 @@ export class AlpacaClient {
           queryParams: params as Record<string, string | number | boolean>
         });
       }
+    };
+  }
+  
+  // Options methods for OptionsFlowAnalyst
+  async getOptionChain(request: OptionChainRequest): Promise<{ snapshots: OptionContract[] }> {
+    // Placeholder for options chain data
+    // In production, this would call Alpaca's options API
+    return { snapshots: [] };
+  }
+  
+  async getOptionQuote(symbol: string): Promise<OptionQuote> {
+    // Placeholder for option quote
+    return {
+      symbol,
+      bidPrice: 0,
+      askPrice: 0,
+      bidSize: 0,
+      askSize: 0,
+      volume: 0,
+      openInterest: 0,
+      impliedVolatility: 0,
+      timestamp: new Date().toISOString()
     };
   }
 }

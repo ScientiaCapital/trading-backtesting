@@ -107,7 +107,12 @@ marketTimeRoutes.get('/countdown', async (c) => {
     const now = new Date();
     
     // Calculate countdowns
-    const countdowns: any = {};
+    interface Countdown {
+      marketOpen?: { time: number; formatted: string };
+      tradingModeStart?: { time: number; formatted: string };
+      marketClose?: { time: number; formatted: string };
+    }
+    const countdowns: Countdown = {};
     
     // Market open countdown
     if (!tradingTime.isMarketOpen()) {

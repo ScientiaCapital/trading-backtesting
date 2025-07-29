@@ -45,6 +45,13 @@ export class TradingTime {
   }
   
   /**
+   * Get current Eastern Time
+   */
+  getCurrentEasternTime(): Date {
+    return this.getMarketTime();
+  }
+  
+  /**
    * Get formatted market time
    */
   getMarketTimeString(): string {

@@ -11,7 +11,8 @@ import {
   AgentMessage,
   AgentMetrics,
   AgentConfig,
-  MessagePriority
+  MessagePriority,
+  MessageType
 } from '@/types/agents';
 import { createLogger } from '@/utils/logger';
 
@@ -29,7 +30,7 @@ export abstract class BaseAgent implements IAgent {
     this.id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.type = type;
     this.config = config;
-    this.logger = createLogger({} as any); // Will be properly initialized with context
+    this.logger = createLogger({ requestId: this.id });
     
     this.metrics = {
       decisionsToday: 0,
@@ -128,7 +129,7 @@ export abstract class BaseAgent implements IAgent {
       id: `${this.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       from: this.type,
       to,
-      type: type as any,
+      type: type as MessageType,
       payload,
       timestamp: Date.now(),
       priority,

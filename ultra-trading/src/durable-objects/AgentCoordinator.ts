@@ -25,7 +25,6 @@ import { ExecutionAgent } from '@/agents/ExecutionAgent';
 // import { MarketHoursResearcher } from '@/agents/MarketHoursResearcher'; // Temporarily disabled
 import { CloudflareBindings } from '@/types';
 import { FastDecisionService } from '@/services/FastDecisionService';
-import { SmartFastDecisionService } from '@/services/SmartFastDecisionService';
 
 export class AgentCoordinator {
   private state: DurableObjectState;
@@ -37,7 +36,6 @@ export class AgentCoordinator {
   private activeDecisions: Map<string, TradingDecision> = new Map();
   private config: CoordinatorConfig;
   private fastDecisionService: FastDecisionService;
-  private smartFastDecisionService: SmartFastDecisionService;
   
   constructor(state: DurableObjectState, env: CloudflareBindings) {
     this.state = state;
@@ -52,7 +50,6 @@ export class AgentCoordinator {
     
     // Initialize fast decision services
     this.fastDecisionService = new FastDecisionService(env);
-    this.smartFastDecisionService = new SmartFastDecisionService(env);
     
     // Initialize coordinator on first request
     this.state.blockConcurrencyWhile(async () => {
@@ -242,9 +239,9 @@ export class AgentCoordinator {
     // Try smart fast decision first if enabled (for time-critical trades with proper risk management)
     if (useQuickDecision && context.marketData && context.positions && context.dailyPnL !== undefined) {
       try {
-        // Use SmartFastDecisionService for better decision quality
+        // Use FastDecisionService for rapid decisions with risk management
         const accountValue = context.account?.portfolio_value || 100000;
-        const smartDecision = await this.smartFastDecisionService.getQuickDecision(
+        const fastDecision = await this.fastDecisionService.getQuickDecision(
           context.marketData,
           context.positions,
           context.dailyPnL,
@@ -253,18 +250,18 @@ export class AgentCoordinator {
         
         // Log decision details for monitoring
         const decisionTime = Date.now() - parseInt(decisionId.split('-')[1] || '0');
-        console.log(`Smart fast decision made in ${decisionTime}ms`, {
-          action: smartDecision.action,
-          confidence: smartDecision.confidence,
-          reasoning: smartDecision.reasoning,
-          metadata: smartDecision.metadata
+        console.log(`Fast decision made in ${decisionTime}ms`, {
+          action: fastDecision.action,
+          confidence: fastDecision.confidence,
+          reasoning: fastDecision.reasoning,
+          metadata: fastDecision.metadata
         });
         
-        // Always use smart decision (it has built-in validation)
-        this.activeDecisions.set(decisionId, smartDecision);
+        // Always use fast decision (it has built-in validation)
+        this.activeDecisions.set(decisionId, fastDecision);
         
         return new Response(
-          JSON.stringify(smartDecision),
+          JSON.stringify(fastDecision),
           { headers: { 'Content-Type': 'application/json' } }
         );
       } catch (error) {
@@ -311,7 +308,7 @@ export class AgentCoordinator {
         const agentPromises = Array.from(this.agents.entries()).map(async ([type, agent]) => {
           try {
             const response = await agent.process(message);
-            if (response && response.payload) {
+            if (response?.payload) {
               responses.set(type, response.payload);
               console.log(`Agent ${type} responded`, { hasPayload: !!response.payload });
             }
@@ -334,7 +331,7 @@ export class AgentCoordinator {
         const agent = this.agents.get(message.to as AgentType);
         if (agent) {
           const response = await agent.process(message);
-          if (response && response.payload) {
+          if (response?.payload) {
             responses.set(message.to as AgentType, response.payload);
           }
         }
@@ -523,9 +520,8 @@ export class AgentCoordinator {
       try {
         const symbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA']; // Main trading symbols
         for (const symbol of symbols) {
-          // Pre-compute for both services
-          await this.fastDecisionService.precomputeIndicators(symbol);
-          // SmartFastDecisionService doesn't need pre-computation as it analyzes in real-time
+          // FastDecisionService analyzes in real-time with risk management
+          // No pre-computation needed
         }
       } catch (error) {
         console.error('Failed to pre-compute indicators:', error);

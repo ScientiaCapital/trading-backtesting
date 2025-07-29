@@ -174,7 +174,7 @@ function validateDecision(scenario: any, decision: any) {
   console.log(`\n✅ Validation:`);
   
   const market = scenario.marketData[0];
-  let issues = [];
+  const issues = [];
   
   // Check overbought/oversold logic
   if (market.rsi > 80 && decision.action === 'ENTER_POSITION') {

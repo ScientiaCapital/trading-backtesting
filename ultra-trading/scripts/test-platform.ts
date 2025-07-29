@@ -103,7 +103,7 @@ async function runTests() {
   
   // Test 10: Market Countdown
   const countdown = await testEndpoint('Market Countdown', 'GET', '/market-time/countdown');
-  if (countdown && countdown.countdowns) {
+  if (countdown?.countdowns) {
     Object.entries(countdown.countdowns).forEach(([key, value]: [string, any]) => {
       log(`${key}: ${value.formatted}`, 'info');
     });

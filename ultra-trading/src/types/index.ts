@@ -26,6 +26,7 @@ export interface CloudflareBindings {
   
   // Object Storage
   DATA_BUCKET: R2Bucket;
+  R2: R2Bucket; // Alias for R2 storage
   
   // AI Models
   AI: Ai;
@@ -349,3 +350,28 @@ export interface RateLimits {
   orders_per_second: number;
   backtest_concurrent_limit: number;
 }
+
+// Re-export agent types
+export type { 
+  AgentConfig, 
+  AgentMessage,
+  AgentContext,
+  AgentStatus,
+  AgentType,
+  AgentResponse,
+  TradingDecision,
+  MarketAnalysis,
+  RiskAssessment,
+  PerformanceStatus,
+  IAgent
+} from './agents';
+
+// Re-export trading types
+export type {
+  Position,
+  Order,
+  Signal
+} from './trading';
+
+// Re-export strategy types
+// MarketSnapshot is defined in FastDecisionService, not exported here
