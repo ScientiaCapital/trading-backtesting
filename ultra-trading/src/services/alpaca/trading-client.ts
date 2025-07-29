@@ -239,7 +239,7 @@ export class AlpacaService {
     request: OptionChainRequest
   ): Promise<OptionContract[]> {
     const params = new URLSearchParams({
-      underlying_symbols: request.underlyingSymbol,
+      underlying_symbols: request.underlyingSymbol || request.underlyingSymbols || '',
       status: 'active',
       type: request.optionType || '',
       strike_price_gte: request.minStrike?.toString() || '',
@@ -388,7 +388,7 @@ export class AlpacaService {
       dateObj = date;
     }
     
-    return dateObj.toISOString().split('T')[0];
+    return dateObj.toISOString().split('T')[0] || '';
   }
 }
 

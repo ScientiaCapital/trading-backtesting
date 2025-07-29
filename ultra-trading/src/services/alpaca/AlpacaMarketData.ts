@@ -47,6 +47,11 @@ export interface AlpacaQuote {
   bs: number; // Bid size
   c: string[]; // Conditions
   z: string; // Tape
+  // Convenience properties for backward compatibility
+  ask_price?: number;
+  ask_size?: number;
+  bid_price?: number;
+  bid_size?: number;
 }
 
 /**

@@ -80,13 +80,13 @@ export class RetrievalOptimizerService {
     
     try {
       // Use Claude for intelligent reranking
-      const response = await this.env.AI.run('@anthropic/claude-3-haiku', {
+      const response = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct' as any, {
         prompt,
         max_tokens: 1000,
         temperature: 0.1 // Low temperature for consistent ranking
       });
 
-      return this.parseRerankingResponse(response.response, request.results);
+      return this.parseRerankingResponse((response as any).response || '', request.results);
     } catch (error) {
       this.logger.error('Batch reranking failed', { error });
       // Return original scores if AI fails
@@ -119,7 +119,7 @@ Chunks to rank:
 `;
 
     results.forEach((result, index) => {
-      const chunk = result.chunk;
+      const {chunk} = result;
       prompt += `
 [${index}]
 Symbol: ${chunk.symbol}
@@ -160,13 +160,16 @@ Example: [{"index": 2, "score": 0.95}, {"index": 0, "score": 0.8}, ...]`;
 
       return rankings.map(ranking => {
         const original = originalResults[ranking.index];
+        if (!original) {
+          return null;
+        }
         return {
           chunk: original.chunk,
           originalScore: original.score,
           rerankScore: ranking.score,
           explanation: ranking.explanation
         };
-      });
+      }).filter((result): result is NonNullable<typeof result> => result !== null);
 
     } catch (error) {
       this.logger.error('Failed to parse reranking response', { error, response });
@@ -295,7 +298,7 @@ Example: [{"index": 2, "score": 0.95}, {"index": 0, "score": 0.8}, ...]`;
    * Clear reranking cache
    */
   clearCache(): void {
-    const size = this.rerankingCache.size;
+    const {size} = this.rerankingCache;
     this.rerankingCache.clear();
     this.logger.info('Cleared reranking cache', { entries: size });
   }

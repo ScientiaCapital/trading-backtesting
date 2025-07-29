@@ -61,8 +61,8 @@ export function sleep(ms: number): Promise<void> {
  */
 export function Retry(options: RetryOptions = {}) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: any,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;

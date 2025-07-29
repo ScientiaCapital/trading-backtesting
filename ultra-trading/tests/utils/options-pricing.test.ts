@@ -289,10 +289,10 @@ describe('Matrix', () => {
         [5, 10]
       ];
       const cov = Matrix.covariance(data);
-      expect(cov[0][0]).toBeCloseTo(2.5, 6); // Variance of first variable
-      expect(cov[1][1]).toBeCloseTo(10, 6); // Variance of second variable
-      expect(cov[0][1]).toBeCloseTo(5, 6); // Covariance
-      expect(cov[1][0]).toBeCloseTo(5, 6); // Symmetric
+      expect(cov[0]?.[0]).toBeCloseTo(2.5, 6); // Variance of first variable
+      expect(cov[1]?.[1]).toBeCloseTo(10, 6); // Variance of second variable
+      expect(cov[0]?.[1]).toBeCloseTo(5, 6); // Covariance
+      expect(cov[1]?.[0]).toBeCloseTo(5, 6); // Symmetric
     });
   });
 });

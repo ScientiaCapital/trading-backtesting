@@ -58,8 +58,6 @@ export interface IndicatorParams {
 export class TechnicalIndicatorsService {
   private indicators: Indicators;
   private logger: ReturnType<typeof createLogger>;
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_TTL = 5000; // 5 seconds
 
   constructor(env: CloudflareBindings) {
     this.indicators = new Indicators();
@@ -137,11 +135,13 @@ export class TechnicalIndicatorsService {
           result.push(undefined);
         } else {
           const idx = i - (slowPeriod + signalPeriod - 2);
-          if (macdResult.MACD?.[idx] !== undefined) {
+          if (macdResult[0]?.[idx] !== undefined && 
+              macdResult[1]?.[idx] !== undefined &&
+              macdResult[2]?.[idx] !== undefined) {
             result.push({
-              macd: macdResult.MACD[idx],
-              signal: macdResult.signal[idx],
-              histogram: macdResult.histogram[idx]
+              macd: macdResult[0][idx],      // MACD line
+              signal: macdResult[1][idx],    // Signal line
+              histogram: macdResult[2][idx]  // Histogram
             });
           } else {
             result.push(undefined);
@@ -164,7 +164,7 @@ export class TechnicalIndicatorsService {
     stdDev: number = 2
   ): Promise<({ upper: number; middle: number; lower: number } | undefined)[]> {
     try {
-      const bbResult = await this.indicators.bb(closes, period, stdDev);
+      const bbResult = await (this.indicators as any).bbands(closes, period, stdDev, stdDev);
       
       const result: ({ upper: number; middle: number; lower: number } | undefined)[] = [];
       for (let i = 0; i < closes.length; i++) {
@@ -172,11 +172,11 @@ export class TechnicalIndicatorsService {
           result.push(undefined);
         } else {
           const idx = i - (period - 1);
-          if (bbResult.upper?.[idx] !== undefined) {
+          if (bbResult[0]?.[idx] !== undefined) {
             result.push({
-              upper: bbResult.upper[idx],
-              middle: bbResult.middle[idx],
-              lower: bbResult.lower[idx]
+              upper: bbResult[0][idx],    // Upper band
+              middle: bbResult[1][idx],  // Middle band (SMA)
+              lower: bbResult[2][idx]    // Lower band
             });
           } else {
             result.push(undefined);
@@ -201,19 +201,29 @@ export class TechnicalIndicatorsService {
   ): Promise<(number | undefined)[]> {
     try {
       // Calculate typical price and cumulative values
-      const vwapValues: number[] = [];
+      const vwapValues: (number | undefined)[] = [];
       let cumulativeTPV = 0;
       let cumulativeVolume = 0;
 
       for (let i = 0; i < closes.length; i++) {
-        const typicalPrice = (highs[i] + lows[i] + closes[i]) / 3;
-        cumulativeTPV += typicalPrice * volumes[i];
-        cumulativeVolume += volumes[i];
+        const high = highs[i];
+        const low = lows[i];
+        const close = closes[i];
+        const volume = volumes[i];
+        
+        if (high === undefined || low === undefined || close === undefined || volume === undefined) {
+          vwapValues.push(undefined);
+          continue;
+        }
+        
+        const typicalPrice = (high + low + close) / 3;
+        cumulativeTPV += typicalPrice * volume;
+        cumulativeVolume += volume;
         
         if (cumulativeVolume > 0) {
           vwapValues.push(cumulativeTPV / cumulativeVolume);
         } else {
-          vwapValues.push(closes[i]);
+          vwapValues.push(closes[i] || 0);
         }
       }
 
@@ -358,15 +368,4 @@ export class TechnicalIndicatorsService {
     return result;
   }
 
-  /**
-   * Clear cache entries older than TTL
-   */
-  private cleanCache(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.CACHE_TTL) {
-        this.cache.delete(key);
-      }
-    }
-  }
 }

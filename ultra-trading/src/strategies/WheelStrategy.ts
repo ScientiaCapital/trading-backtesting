@@ -8,8 +8,7 @@
 import { TradingStrategy } from '@/types/strategy';
 import type { Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
 import { AssetClass } from '@/types/trading';
-import type { Order, OrderSide, OrderType, Position } from '@/types/trading';
-import type { OptionContract, OptionQuote } from '@/types/options';
+import type { OptionContract } from '@/types/options';
 import { AlpacaService } from '@/services/alpaca/trading-client';
 import { MarketDataService } from '@/services/market-data';
 import { BlackScholesEngine } from '@/utils/options-pricing';
@@ -192,7 +191,7 @@ export class WheelStrategy extends TradingStrategy {
 
     // Get put options
     const putOptions = await this.alpaca.getOptionContracts('system', {
-      underlyingSymbol: this.config.underlyingSymbol,
+      underlyingSymbols: this.config.underlyingSymbol,
       optionType: 'put',
       minStrike: targetStrike * 0.95,
       maxStrike: targetStrike * 1.05,
@@ -249,7 +248,7 @@ export class WheelStrategy extends TradingStrategy {
 
     // Get call options
     const callOptions = await this.alpaca.getOptionContracts('system', {
-      underlyingSymbol: this.config.underlyingSymbol,
+      underlyingSymbols: this.config.underlyingSymbol,
       optionType: 'call',
       minStrike: targetStrike * 0.95,
       maxStrike: targetStrike * 1.05,
@@ -435,9 +434,9 @@ export class WheelStrategy extends TradingStrategy {
         const current = historicalData[i];
         const previous = historicalData[i - 1];
         
-        const highLow = current.high! - current.low!;
-        const highPrevClose = Math.abs(current.high! - previous.close!);
-        const lowPrevClose = Math.abs(current.low! - previous.close!);
+        const highLow = (current?.high || 0) - (current?.low || 0);
+        const highPrevClose = Math.abs((current?.high || 0) - (previous?.close || 0));
+        const lowPrevClose = Math.abs((current?.low || 0) - (previous?.close || 0));
         
         trueRanges.push(Math.max(highLow, highPrevClose, lowPrevClose));
       }

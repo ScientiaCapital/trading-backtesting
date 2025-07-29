@@ -519,7 +519,7 @@ export class AgentCoordinator {
     setInterval(async () => {
       try {
         const symbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA']; // Main trading symbols
-        for (const symbol of symbols) {
+        for (const _symbol of symbols) {
           // FastDecisionService analyzes in real-time with risk management
           // No pre-computation needed
         }

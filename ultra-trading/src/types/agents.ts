@@ -4,7 +4,7 @@
  */
 
 import type { MarketData, Signal } from './strategy';
-import type { Order, Position } from './trading';
+import type { Position } from './trading';
 
 /**
  * Base agent types
@@ -50,6 +50,7 @@ export enum MessageType {
   ANALYSIS_RESULT = 'ANALYSIS_RESULT',
   SIGNAL_GENERATED = 'SIGNAL_GENERATED',
   RISK_ALERT = 'RISK_ALERT',
+  RISK_ASSESSMENT = 'RISK_ASSESSMENT',
   EXECUTION_REQUEST = 'EXECUTION_REQUEST',
   EXECUTION_RESULT = 'EXECUTION_RESULT',
   PERFORMANCE_UPDATE = 'PERFORMANCE_UPDATE',

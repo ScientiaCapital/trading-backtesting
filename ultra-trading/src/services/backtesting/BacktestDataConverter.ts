@@ -27,15 +27,16 @@ export class BacktestDataConverter implements DataConverter {
 
     for (const bar of sortedBars) {
       // Convert timestamp to YYYY-MM-DD format for fastquant
+      if (!bar.t) continue;
       const date = new Date(bar.t);
       const dateStr = date.toISOString().split('T')[0];
       
       ohlcv.date.push(dateStr);
-      ohlcv.open.push(bar.o);
-      ohlcv.high.push(bar.h);
-      ohlcv.low.push(bar.l);
-      ohlcv.close.push(bar.c);
-      ohlcv.volume.push(bar.v);
+      ohlcv.open.push(bar.o || 0);
+      ohlcv.high.push(bar.h || 0);
+      ohlcv.low.push(bar.l || 0);
+      ohlcv.close.push(bar.c || 0);
+      ohlcv.volume.push(bar.v || 0);
     }
 
     return ohlcv;
@@ -85,12 +86,12 @@ export class BacktestDataConverter implements DataConverter {
 
     for (const bar of sortedBars) {
       // Keep full timestamp for intraday data
-      ohlcv.date.push(bar.t);
-      ohlcv.open.push(bar.o);
-      ohlcv.high.push(bar.h);
-      ohlcv.low.push(bar.l);
-      ohlcv.close.push(bar.c);
-      ohlcv.volume.push(bar.v);
+      ohlcv.date.push(bar.t || '');
+      ohlcv.open.push(bar.o || 0);
+      ohlcv.high.push(bar.h || 0);
+      ohlcv.low.push(bar.l || 0);
+      ohlcv.close.push(bar.c || 0);
+      ohlcv.volume.push(bar.v || 0);
     }
 
     return ohlcv;
@@ -123,16 +124,23 @@ export class BacktestDataConverter implements DataConverter {
 
     // Check for invalid values
     for (let i = 0; i < data.date.length; i++) {
-      if (data.high[i] < data.low[i]) {
-        errors.push(`Invalid OHLC at ${data.date[i]}: high < low`);
+      const high = data.high[i];
+      const low = data.low[i];
+      const open = data.open[i];
+      const close = data.close[i];
+      const volume = data.volume[i];
+      const date = data.date[i];
+      
+      if (high !== undefined && low !== undefined && high < low) {
+        errors.push(`Invalid OHLC at ${date}: high < low`);
       }
       
-      if (data.open[i] <= 0 || data.close[i] <= 0) {
-        errors.push(`Invalid price at ${data.date[i]}: price <= 0`);
+      if ((open !== undefined && open <= 0) || (close !== undefined && close <= 0)) {
+        errors.push(`Invalid price at ${date}: price <= 0`);
       }
 
-      if (data.volume[i] < 0) {
-        errors.push(`Invalid volume at ${data.date[i]}: volume < 0`);
+      if (volume !== undefined && volume < 0) {
+        errors.push(`Invalid volume at ${date}: volume < 0`);
       }
     }
 
@@ -160,12 +168,19 @@ export class BacktestDataConverter implements DataConverter {
     // Create a map of existing data
     const dataMap = new Map<string, number>();
     for (let i = 0; i < data.date.length; i++) {
-      dataMap.set(data.date[i], i);
+      const dateKey = data.date[i];
+      if (dateKey !== undefined) {
+        dataMap.set(dateKey, i);
+      }
     }
 
     // Generate all trading days
-    const startDate = new Date(data.date[0]);
-    const endDate = new Date(data.date[data.date.length - 1]);
+    const firstDate = data.date[0];
+    const lastDate = data.date[data.date.length - 1];
+    if (!firstDate || !lastDate) return data;
+    
+    const startDate = new Date(firstDate);
+    const endDate = new Date(lastDate);
     const currentDate = new Date(startDate);
 
     let lastValidIndex = 0;
@@ -176,23 +191,24 @@ export class BacktestDataConverter implements DataConverter {
 
       // Skip weekends
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        if (dataMap.has(dateStr)) {
+        if (dateStr && dataMap.has(dateStr)) {
           // Use existing data
           const idx = dataMap.get(dateStr)!;
           filled.date.push(dateStr);
-          filled.open.push(data.open[idx]);
-          filled.high.push(data.high[idx]);
-          filled.low.push(data.low[idx]);
-          filled.close.push(data.close[idx]);
-          filled.volume.push(data.volume[idx]);
+          filled.open.push(data.open[idx] ?? 0);
+          filled.high.push(data.high[idx] ?? 0);
+          filled.low.push(data.low[idx] ?? 0);
+          filled.close.push(data.close[idx] ?? 0);
+          filled.volume.push(data.volume[idx] ?? 0);
           lastValidIndex = idx;
         } else {
           // Forward fill missing data
+          const lastClose = data.close[lastValidIndex] || 0;
           filled.date.push(dateStr);
-          filled.open.push(data.close[lastValidIndex]); // Open = previous close
-          filled.high.push(data.close[lastValidIndex]);
-          filled.low.push(data.close[lastValidIndex]);
-          filled.close.push(data.close[lastValidIndex]);
+          filled.open.push(lastClose); // Open = previous close
+          filled.high.push(lastClose);
+          filled.low.push(lastClose);
+          filled.close.push(lastClose);
           filled.volume.push(0); // No volume on missing days
         }
       }
@@ -237,18 +253,23 @@ export class BacktestDataConverter implements DataConverter {
       const endIdx = Math.min(i + minutes, data.date.length);
       
       // Get the slice for this period
-      const periodOpen = data.open[i];
-      const periodClose = data.close[endIdx - 1];
-      const periodHigh = Math.max(...data.high.slice(i, endIdx));
-      const periodLow = Math.min(...data.low.slice(i, endIdx));
-      const periodVolume = data.volume.slice(i, endIdx).reduce((a, b) => a + b, 0);
+      const periodOpen = data.open[i] || 0;
+      const periodClose = data.close[endIdx - 1] || 0;
+      const highSlice = data.high.slice(i, endIdx).filter(h => h !== undefined) as number[];
+      const lowSlice = data.low.slice(i, endIdx).filter(l => l !== undefined) as number[];
+      const periodHigh = highSlice.length > 0 ? Math.max(...highSlice) : 0;
+      const periodLow = lowSlice.length > 0 ? Math.min(...lowSlice) : 0;
+      const periodVolume = data.volume.slice(i, endIdx).reduce((a, b) => (a || 0) + (b || 0), 0);
       
-      resampled.date.push(data.date[i]);
-      resampled.open.push(periodOpen);
-      resampled.high.push(periodHigh);
-      resampled.low.push(periodLow);
-      resampled.close.push(periodClose);
-      resampled.volume.push(periodVolume);
+      const dateValue = data.date[i];
+      if (dateValue) {
+        resampled.date.push(dateValue);
+        resampled.open.push(periodOpen);
+        resampled.high.push(periodHigh);
+        resampled.low.push(periodLow);
+        resampled.close.push(periodClose);
+        resampled.volume.push(periodVolume);
+      }
     }
 
     return resampled;

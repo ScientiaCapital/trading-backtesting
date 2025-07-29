@@ -68,6 +68,7 @@ export interface Order {
   limitPrice?: number;
   stopPrice?: number;
   filledAvgPrice?: number;
+  avgFillPrice?: number; // Alias for filledAvgPrice
   status: OrderStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +84,7 @@ export interface Order {
   trailPrice?: number;
   trailPercent?: number;
   hwm?: number;
+  rejected_reason?: string;
 }
 
 export interface Position {

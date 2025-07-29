@@ -23,6 +23,7 @@ export interface CloudflareBindings {
   
   // Key-Value Storage
   CACHE: KVNamespace;
+  KV?: KVNamespace; // Alias for KV storage
   
   // Object Storage
   DATA_BUCKET: R2Bucket;
@@ -51,6 +52,7 @@ export interface CloudflareBindings {
   ALPACA_SECRET_KEY?: string;
   ALPACA_API_KEY?: string;
   ALPACA_API_SECRET?: string;
+  PYTHON_SERVICE_URL?: string;
 }
 
 /**

@@ -3,7 +3,7 @@
  * Tests for Alpaca trading functionality
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import app from '../src/index';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
@@ -22,7 +22,7 @@ const testEnv = {
   ALPACA_API_KEY: 'PKDINXYX5XL2HL5P5TNV',
   DB: {
     prepare: (query: string) => ({
-      bind: (...params: any[]) => ({
+      bind: (..._params: any[]) => ({
         first: async () => {
           // Mock user lookup for auth
           if (query.includes('SELECT * FROM users')) {
@@ -64,7 +64,7 @@ const testEnv = {
   },
   TRADING_SESSION: {
     idFromName: (name: string) => ({ toString: () => `id-${name}` }),
-    get: (id: any) => ({
+    get: (_id: any) => ({
       fetch: async () => new Response('WebSocket mock', { status: 101 })
     })
   }

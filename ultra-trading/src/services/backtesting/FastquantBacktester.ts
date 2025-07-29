@@ -193,7 +193,7 @@ export class FastquantBacktester extends FastquantBacktesterBase {
    * Optimize strategy for next day's trading
    */
   async optimizeForTomorrow(
-    symbol: string,
+    _symbol: string,
     strategy: 'RSI' | 'MACD' | 'BBANDS' | 'ODDTE_OPTIONS'
   ): Promise<{
     optimalParameters: StrategyParameters;
@@ -201,7 +201,7 @@ export class FastquantBacktester extends FastquantBacktesterBase {
     confidence: number;
   }> {
     // Get 60 days of historical data
-    const endDate = new Date();
+    // const endDate = new Date(); // TODO: Use when implementing date range
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 60);
 
@@ -245,7 +245,9 @@ export class FastquantBacktester extends FastquantBacktesterBase {
         return;
       }
 
-      const [key, range] = params[index];
+      const param = params[index];
+      if (!param) return;
+      const [key, range] = param;
       for (let value = range.min; value <= range.max; value += range.step) {
         current[key] = value;
         generate(index + 1, current);
@@ -302,7 +304,10 @@ export class FastquantBacktester extends FastquantBacktesterBase {
 
     // Sort results by metric
     const sorted = [...result.allResults].sort((a, b) => b.metric - a.metric);
-    const bestMetric = sorted[0].metric;
+    const firstResult = sorted[0];
+    if (!firstResult) return 0;
+    
+    const bestMetric = firstResult.metric;
 
     // Calculate standard deviation
     const mean = sorted.reduce((sum, r) => sum + r.metric, 0) / sorted.length;

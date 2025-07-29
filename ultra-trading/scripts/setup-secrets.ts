@@ -150,7 +150,7 @@ async function listSecrets(environment: string) {
 
 async function main() {
   console.log('🔐 ULTRA Trading Platform - Secrets Setup');
-  console.log('=' * 50);
+  console.log('='.repeat(50));
   
   const args = process.argv.slice(2);
   const environmentFilter = args[0];

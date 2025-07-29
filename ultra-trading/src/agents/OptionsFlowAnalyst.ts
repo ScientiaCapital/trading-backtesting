@@ -9,20 +9,18 @@ import {
   AgentStatus, 
   AgentMessage, 
   MessageType,
-  MessagePriority
+  MessagePriority,
+  TradingAction
 } from '@/types/agents';
 import { 
   CloudflareBindings,
   AgentConfig,
-  AgentResponse,
-  TradingDecision,
-  TradingAction
+  TradingDecision
 } from '@/types';
 import { AlpacaClient } from '@/services/alpaca/AlpacaClient';
 import { 
   OptionContract, 
-  OptionChainRequest,
-  OptionQuote 
+  OptionChainRequest
 } from '@/types/options';
 import { Signal } from '@/types/strategy';
 
@@ -143,7 +141,7 @@ export class OptionsFlowAnalyst extends BaseAgent {
 
       // Analyze each symbol in watchlist
       for (const symbol of this.watchlist) {
-        const opportunity = await this.analyzeSymbolFlow(symbol, expirationDate);
+        const opportunity = await this.analyzeSymbolFlow(symbol, expirationDate || '');
         if (opportunity) {
           signals.push(opportunity);
         }
@@ -184,7 +182,7 @@ export class OptionsFlowAnalyst extends BaseAgent {
       if (!chain || chain.length === 0) return null;
 
       // Get current stock price
-      const quote = await this.alpacaClient.getLatestQuote(symbol);
+      const quote = await this.alpacaClient.marketData.getLatestQuote(symbol);
       const currentPrice = (quote.bid_price + quote.ask_price) / 2;
 
       // Filter for near-the-money options
@@ -263,7 +261,7 @@ export class OptionsFlowAnalyst extends BaseAgent {
     const quote = await this.alpacaClient.getOptionQuote(contract.symbol);
     
     // Calculate volume ratio (current vs 20-day average)
-    const volumeRatio = quote.volume / (contract.openInterest / 20);
+    const volumeRatio = quote.volume / ((contract.openInterest || 1) / 20);
     
     // Calculate premium flow
     const midPrice = (quote.bidPrice + quote.askPrice) / 2;
@@ -279,7 +277,9 @@ export class OptionsFlowAnalyst extends BaseAgent {
     }
 
     // Check if it's likely a hedge (opposite of stock movement)
-    const stockMovement = (stockPrice - contract.underlyingPrice) / contract.underlyingPrice;
+    const stockMovement = contract.underlyingPrice 
+      ? (stockPrice - contract.underlyingPrice) / contract.underlyingPrice
+      : 0;
     if (Math.abs(stockMovement) > 0.02) {
       if ((contract.type === 'call' && stockMovement < -0.02) ||
           (contract.type === 'put' && stockMovement > 0.02)) {
@@ -338,8 +338,8 @@ export class OptionsFlowAnalyst extends BaseAgent {
       volumeRatio: metrics.volumeRatio,
       flowDirection: metrics.direction,
       premiumFlow: metrics.premiumFlow,
-      stopLoss: contract.lastPrice * 0.5, // 50% stop loss
-      takeProfit: contract.lastPrice * 2.0, // 100% profit target
+      stopLoss: (contract.lastPrice || 1) * 0.5, // 50% stop loss
+      takeProfit: (contract.lastPrice || 1) * 2.0, // 100% profit target
       reasoning: this.generateReasoning(symbol, contract, metrics)
     };
   }
@@ -384,17 +384,9 @@ export class OptionsFlowAnalyst extends BaseAgent {
       action: flowSignal.action === 'BUY' ? 'buy' : 'sell',
       quantity: 1, // Start with 1 contract
       confidence: flowSignal.confidence,
-      metadata: {
-        type: '0DTE_OPTIONS',
-        underlying: flowSignal.symbol,
-        strike: flowSignal.strike,
-        expiration: flowSignal.expiration,
-        volumeRatio: flowSignal.volumeRatio,
-        premiumFlow: flowSignal.premiumFlow,
-        stopLoss: flowSignal.stopLoss,
-        takeProfit: flowSignal.takeProfit,
-        reasoning: flowSignal.reasoning
-      }
+      orderType: 'market' as const,
+      timeInForce: 'day' as const,
+      reason: flowSignal.reasoning
     };
   }
 
@@ -415,7 +407,7 @@ export class OptionsFlowAnalyst extends BaseAgent {
   /**
    * Generate trading decision for execution
    */
-  async getRecommendation(flowData: any): Promise<TradingDecision> {
+  async getRecommendation(_flowData: any): Promise<TradingDecision> {
     const signals = await this.analyzeOptionsFlow();
     
     if (signals.length === 0) {
@@ -431,6 +423,16 @@ export class OptionsFlowAnalyst extends BaseAgent {
 
     // Take the highest confidence signal
     const topSignal = signals[0];
+    if (!topSignal) {
+      return {
+        id: `decision-${Date.now()}`,
+        timestamp: Date.now(),
+        action: TradingAction.WAIT,
+        signals: [],
+        confidence: 0,
+        reasoning: 'No valid signals to execute'
+      };
+    }
     
     // Calculate position size based on confidence
     const quantity = Math.floor(topSignal.confidence * 5); // Max 5 contracts

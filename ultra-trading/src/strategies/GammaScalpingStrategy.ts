@@ -6,7 +6,6 @@
  */
 
 import { TradingStrategy, Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
-import { Order, OrderType, TimeInForce } from '@/types/trading';
 import { OptionContract, OptionQuote } from '@/types/options';
 import { AlpacaService } from '@/services/alpaca/trading-client';
 import { MarketDataService } from '@/services/market-data';
@@ -58,7 +57,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
   
   private readonly alpaca: AlpacaService;
   private readonly marketData: MarketDataService;
-  private readonly bsEngine: BlackScholesEngine;
+  // @ts-ignore - Reserved for future Greeks calculations
+  private readonly _bsEngine: BlackScholesEngine;
   private positions: Map<string, GammaPosition> = new Map();
   private config: GammaScalpingConfig;
 
@@ -71,7 +71,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
     this.config = config;
     this.alpaca = alpaca;
     this.marketData = marketData;
-    this.bsEngine = new BlackScholesEngine(config.riskFreeRate);
+    this._bsEngine = new BlackScholesEngine(config.riskFreeRate);
   }
 
   /**
@@ -133,7 +133,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
 
     // Check if we have market data access
     try {
-      await this.marketData.getQuote(this.config.underlyingSymbol);
+      await this.marketData.getLatestSnapshot(this.config.underlyingSymbol);
     } catch (error) {
       errors.push('Unable to access market data for underlying symbol');
     }
@@ -180,8 +180,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
       symbol: marketData.symbol,
       side: sharesToHedge > 0 ? 'buy' : 'sell',
       quantity: Math.abs(sharesToHedge),
-      orderType: 'market' as OrderType,
-      timeInForce: 'day' as TimeInForce,
+      orderType: 'market',
+      timeInForce: 'day',
       reason: `Gamma hedge: ${gammaExposure.toFixed(2)} gamma exposure`,
       confidence: 0.9
     };
@@ -196,12 +196,17 @@ export class GammaScalpingStrategy extends TradingStrategy {
     
     try {
       // Get option chain
+      const minExpDate = new Date();
+      minExpDate.setDate(minExpDate.getDate() + 7);
+      const maxExpDate = new Date();
+      maxExpDate.setDate(maxExpDate.getDate() + 45);
+      
       const options = await this.alpaca.getOptionContracts('system', {
-        underlyingSymbol: this.config.underlyingSymbol,
+        underlyingSymbols: this.config.underlyingSymbol,
         minStrike: atmStrike - 10,
         maxStrike: atmStrike + 10,
-        minExpiration: 7,
-        maxExpiration: 45
+        minExpiration: minExpDate,
+        maxExpiration: maxExpDate
       });
 
       // Find option with highest gamma
@@ -212,7 +217,7 @@ export class GammaScalpingStrategy extends TradingStrategy {
         const quote = await this.marketData.getOptionQuote(option.symbol);
         if (quote?.greeks && quote.greeks.gamma > highestGamma) {
           highestGamma = quote.greeks.gamma;
-          bestOption = { ...option, quote, greeks: quote.greeks };
+          bestOption = { ...option, quote, greeks: { ...quote.greeks, iv: quote.impliedVolatility || 0.25 } };
         }
       }
 
@@ -222,8 +227,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
           symbol: bestOption.symbol,
           side: 'buy',
           quantity: 1,
-          orderType: 'limit' as OrderType,
-          timeInForce: 'day' as TimeInForce,
+          orderType: 'limit',
+          timeInForce: 'day',
           limitPrice: bestOption.quote!.askPrice,
           reason: `High gamma opportunity: ${highestGamma.toFixed(4)}`,
           confidence: 0.7
@@ -239,10 +244,10 @@ export class GammaScalpingStrategy extends TradingStrategy {
   /**
    * Check exit conditions for existing positions
    */
-  private async checkExitConditions(marketData: MarketData): Promise<Signal[]> {
+  private async checkExitConditions(_marketData: MarketData): Promise<Signal[]> {
     const signals: Signal[] = [];
 
-    for (const [symbol, position] of this.positions) {
+    for (const [, position] of this.positions) {
       const quote = await this.marketData.getOptionQuote(position.optionSymbol);
       if (!quote) continue;
 
@@ -257,8 +262,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
           symbol: position.optionSymbol,
           side: 'sell',
           quantity: position.quantity,
-          orderType: 'market' as OrderType,
-          timeInForce: 'day' as TimeInForce,
+          orderType: 'market',
+          timeInForce: 'day',
           reason: `Stop loss triggered: ${(pnlPercent * 100).toFixed(2)}% loss`,
           confidence: 1.0
         });
@@ -271,8 +276,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
           symbol: position.optionSymbol,
           side: 'sell',
           quantity: position.quantity,
-          orderType: 'limit' as OrderType,
-          timeInForce: 'day' as TimeInForce,
+          orderType: 'limit',
+          timeInForce: 'day',
           limitPrice: quote.bidPrice,
           reason: `Take profit triggered: ${(pnlPercent * 100).toFixed(2)}% gain`,
           confidence: 0.9
@@ -287,8 +292,8 @@ export class GammaScalpingStrategy extends TradingStrategy {
           symbol: position.optionSymbol,
           side: 'sell',
           quantity: position.quantity,
-          orderType: 'market' as OrderType,
-          timeInForce: 'day' as TimeInForce,
+          orderType: 'market',
+          timeInForce: 'day',
           reason: `Rolling position: ${daysToExpiry} days to expiry`,
           confidence: 0.8
         });
@@ -311,12 +316,11 @@ export class GammaScalpingStrategy extends TradingStrategy {
   /**
    * Get current strategy state
    */
-  getState() {
+  override getState() {
     return {
       name: this.name,
       status: 'running' as const,
-      positions: Array.from(this.positions.entries()).map(([symbol, pos]) => ({
-        symbol,
+      positions: Array.from(this.positions.entries()).map(([_, pos]) => ({
         ...pos
       })),
       metrics: {

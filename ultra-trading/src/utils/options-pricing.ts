@@ -496,8 +496,8 @@ export class Statistics {
     let denY = 0;
 
     for (let i = 0; i < n; i++) {
-      const dx = x[i] - meanX;
-      const dy = y[i] - meanY;
+      const dx = (x[i] || 0) - meanX;
+      const dy = (y[i] || 0) - meanY;
       num += dx * dy;
       denX += dx * dx;
       denY += dy * dy;

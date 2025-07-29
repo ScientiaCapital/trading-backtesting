@@ -6,6 +6,7 @@
 import { CloudflareBindings } from '@/types';
 import { AlpacaClient } from './alpaca/AlpacaClient';
 import { createLogger } from '@/utils';
+import { OrderSide, OrderType, TimeInForce } from '@/types/trading';
 
 export enum AssetClass {
   STOCKS = 'STOCKS',
@@ -159,9 +160,9 @@ class AlpacaCryptoConnector implements Connector {
     const alpacaOrder = await this.alpacaClient.submitOrder({
       symbol: order.symbol,
       qty: order.quantity,
-      side: order.side,
-      type: order.type,
-      time_in_force: order.timeInForce,
+      side: order.side === 'buy' ? OrderSide.BUY : OrderSide.SELL,
+      type: mapOrderTypeStatic(order.type),
+      time_in_force: mapTimeInForceStatic(order.timeInForce),
       limit_price: order.limitPrice,
       stop_price: order.stopPrice,
       extended_hours: true // Crypto trades 24/7
@@ -171,9 +172,9 @@ class AlpacaCryptoConnector implements Connector {
       id: alpacaOrder.id,
       symbol: alpacaOrder.symbol,
       status: alpacaOrder.status as OrderResult['status'],
-      filledQty: alpacaOrder.filled_qty ? parseFloat(alpacaOrder.filled_qty) : undefined,
-      filledPrice: alpacaOrder.filled_avg_price ? parseFloat(alpacaOrder.filled_avg_price) : undefined,
-      createdAt: new Date(alpacaOrder.created_at),
+      filledQty: alpacaOrder.filledQuantity,
+      filledPrice: alpacaOrder.filledAvgPrice,
+      createdAt: alpacaOrder.createdAt,
       message: alpacaOrder.rejected_reason
     };
   }
@@ -275,11 +276,10 @@ export class MultiAssetConnector {
     this.alpacaClient = new AlpacaClient(env, requestId);
     
     // Initialize connectors
-    this.connectors = new Map([
-      [AssetClass.CRYPTO, new AlpacaCryptoConnector(this.alpacaClient, this.logger)],
-      [AssetClass.FOREX, new ForexConnector(this.logger)],
-      [AssetClass.COMMODITIES, new CommoditiesConnector(this.logger)]
-    ]);
+    this.connectors = new Map<AssetClass, Connector>();
+    this.connectors.set(AssetClass.CRYPTO, new AlpacaCryptoConnector(this.alpacaClient, this.logger));
+    this.connectors.set(AssetClass.FOREX, new ForexConnector(this.logger));
+    this.connectors.set(AssetClass.COMMODITIES, new CommoditiesConnector(this.logger));
   }
 
   /**
@@ -386,9 +386,9 @@ export class MultiAssetConnector {
       const alpacaOrder = await this.alpacaClient.submitOrder({
         symbol: order.symbol,
         qty: order.quantity,
-        side: order.side,
-        type: order.type,
-        time_in_force: order.timeInForce,
+        side: order.side === 'buy' ? OrderSide.BUY : OrderSide.SELL,
+        type: this.mapOrderType(order.type),
+        time_in_force: this.mapTimeInForce(order.timeInForce),
         limit_price: order.limitPrice,
         stop_price: order.stopPrice
       });
@@ -397,9 +397,9 @@ export class MultiAssetConnector {
         id: alpacaOrder.id,
         symbol: alpacaOrder.symbol,
         status: alpacaOrder.status as OrderResult['status'],
-        filledQty: alpacaOrder.filled_qty ? parseFloat(alpacaOrder.filled_qty) : undefined,
-        filledPrice: alpacaOrder.filled_avg_price ? parseFloat(alpacaOrder.filled_avg_price) : undefined,
-        createdAt: new Date(alpacaOrder.created_at),
+        filledQty: alpacaOrder.filledQuantity,
+        filledPrice: alpacaOrder.filledAvgPrice,
+        createdAt: alpacaOrder.createdAt,
         message: alpacaOrder.rejected_reason
       };
     }
@@ -421,7 +421,7 @@ export class MultiAssetConnector {
     // Check stock market hours
     if (assetClass === AssetClass.STOCKS || assetClass === AssetClass.OPTIONS) {
       const clock = await this.alpacaClient.getClock();
-      return clock.is_open;
+      return clock.isOpen;
     }
     
     const connector = this.connectors.get(assetClass);
@@ -475,7 +475,12 @@ export class MultiAssetConnector {
     spread: number;
     opportunity: 'BUY_1_SELL_2' | 'BUY_2_SELL_1';
   }>> {
-    const opportunities = [];
+    const opportunities: Array<{
+      symbol1: string;
+      symbol2: string;
+      spread: number;
+      opportunity: 'BUY_1_SELL_2' | 'BUY_2_SELL_1';
+    }> = [];
     
     // Get quotes for all symbols
     const quotes = await Promise.all(
@@ -515,5 +520,33 @@ export class MultiAssetConnector {
     }
     
     return opportunities;
+  }
+  
+  private mapOrderType(type: string): OrderType {
+    return mapOrderTypeStatic(type);
+  }
+  
+  private mapTimeInForce(tif: string): TimeInForce {
+    return mapTimeInForceStatic(tif);
+  }
+}
+
+// Static helper functions
+function mapOrderTypeStatic(type: string): OrderType {
+  switch (type) {
+    case 'market': return OrderType.MARKET;
+    case 'limit': return OrderType.LIMIT;
+    case 'stop': return OrderType.STOP;
+    default: return OrderType.MARKET;
+  }
+}
+
+function mapTimeInForceStatic(tif: string): TimeInForce {
+  switch (tif) {
+    case 'day': return TimeInForce.DAY;
+    case 'gtc': return TimeInForce.GTC;
+    case 'ioc': return TimeInForce.IOC;
+    case 'fok': return TimeInForce.FOK;
+    default: return TimeInForce.DAY;
   }
 }

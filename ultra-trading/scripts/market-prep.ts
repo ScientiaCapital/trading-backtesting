@@ -9,7 +9,7 @@ import { TRADING_WATCHLIST, MARKET_OPEN_CHECKLIST } from '../src/config/watchlis
 async function fetchQuote(symbol: string) {
   try {
     const response = await fetch(`http://localhost:8787/api/v1/trading/market/quotes/${symbol}`);
-    const data = await response.json();
+    const data: any = await response.json();
     return data.data;
   } catch (error) {
     console.error(`Failed to fetch quote for ${symbol}:`, error);
@@ -20,7 +20,7 @@ async function fetchQuote(symbol: string) {
 async function checkAccount() {
   try {
     const response = await fetch('http://localhost:8787/api/v1/trading/account');
-    const data = await response.json();
+    const data: any = await response.json();
     return data.data;
   } catch (error) {
     console.error('Failed to fetch account info:', error);
@@ -31,7 +31,7 @@ async function checkAccount() {
 async function checkMarketStatus() {
   try {
     const response = await fetch('http://localhost:8787/api/v1/trading/market/status');
-    const data = await response.json();
+    const data: any = await response.json();
     return data.data;
   } catch (error) {
     console.error('Failed to fetch market status:', error);
@@ -42,7 +42,7 @@ async function checkMarketStatus() {
 async function getOpenOrders() {
   try {
     const response = await fetch('http://localhost:8787/api/v1/trading/orders?status=open');
-    const data = await response.json();
+    const data: any = await response.json();
     return data.data || [];
   } catch (error) {
     console.error('Failed to fetch open orders:', error);
@@ -53,7 +53,7 @@ async function getOpenOrders() {
 async function getPositions() {
   try {
     const response = await fetch('http://localhost:8787/api/v1/trading/positions');
-    const data = await response.json();
+    const data: any = await response.json();
     return data.data || [];
   } catch (error) {
     console.error('Failed to fetch positions:', error);
@@ -63,7 +63,7 @@ async function getPositions() {
 
 async function main() {
   console.log('🚀 ULTRA Trading Platform - Market Preparation');
-  console.log('=' * 50);
+  console.log('='.repeat(50));
   
   // Check market status
   console.log('\n📊 Market Status:');
@@ -118,7 +118,7 @@ async function main() {
     const quote = await fetchQuote(item.symbol);
     if (quote) {
       const mid = (quote.bid_price + quote.ask_price) / 2;
-      const change = ((mid - item.currentPrice) / item.currentPrice * 100);
+      const change = item.currentPrice ? ((mid - item.currentPrice) / item.currentPrice * 100) : 0;
       const changeColor = change >= 0 ? '🟢' : '🔴';
       console.log(`${changeColor} ${item.symbol}: $${mid.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)}%)`);
       

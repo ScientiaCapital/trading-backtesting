@@ -32,8 +32,8 @@ export class ContextualBM25Service {
   private statsCache: Map<string, DocumentStats> = new Map();
   private tokenCache: Map<string, string[]> = new Map();
 
-  constructor(private env: CloudflareBindings) {
-    this.logger = createLogger({ env } as any);
+  constructor(private _env: CloudflareBindings) {
+    this.logger = createLogger({ env: this._env } as any);
   }
 
   /**
@@ -179,7 +179,7 @@ export class ContextualBM25Service {
   private processTradingTokens(tokens: string[]): string[] {
     const processed: string[] = [];
     
-    for (let token of tokens) {
+    for (const token of tokens) {
       // Keep financial symbols intact
       if (token.startsWith('$')) {
         processed.push(token);

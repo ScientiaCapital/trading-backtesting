@@ -27,6 +27,7 @@ export interface OptionContract {
   openInterestDate?: string;
   volume?: number;
   lastPrice?: number; // Last traded price
+  quote?: OptionQuote; // Quote data for the contract
 }
 
 export interface OptionChainRequest {
@@ -58,6 +59,7 @@ export interface OptionQuote {
   theta?: number;
   vega?: number;
   timestamp: Date;
+  greeks?: Greeks; // Greeks calculations
 }
 
 export interface OptionPosition {

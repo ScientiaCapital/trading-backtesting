@@ -5,6 +5,8 @@
 
 import type { CloudflareBindings } from '../../types';
 import type { 
+  BacktestConfig,
+  BacktestResult,
   MultiAssetBacktestConfig,
   MultiAssetBacktestResult,
   BacktestRequest,
@@ -30,14 +32,6 @@ interface MarketRegime {
   };
 }
 
-interface OptimalAllocation {
-  symbol: string;
-  currentAllocation: number;
-  optimalAllocation: number;
-  expectedReturn: number;
-  risk: number;
-  sharpeRatio: number;
-}
 
 interface PortfolioAnalysis {
   totalReturn: number;
@@ -58,6 +52,55 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
   
   constructor(env: CloudflareBindings, requestId: string) {
     super(env, requestId);
+  }
+
+  /**
+   * Execute a backtest (required by abstract base class)
+   */
+  async execute(config: BacktestConfig): Promise<BacktestResult> {
+    // Convert BacktestConfig to MultiAssetBacktestConfig
+    const multiAssetConfig: MultiAssetBacktestConfig = {
+      assets: [{ 
+        symbol: config.symbol, 
+        allocation: 1.0, 
+        assetClass: 'stock' 
+      }],
+      rebalanceFrequency: 'monthly',
+      startDate: config.startDate,
+      endDate: config.endDate,
+      initialCapital: config.initialCapital || this.DEFAULT_ACCOUNT_SIZE
+    };
+    
+    const result = await this.validatePortfolio(multiAssetConfig);
+    
+    // Convert MultiAssetBacktestResult to BacktestResult
+    return {
+      id: `backtest-${Date.now()}`,
+      config: config,
+      metrics: {
+        totalReturn: result.portfolioMetrics.totalReturn,
+        annualizedReturn: result.portfolioMetrics.annualizedReturn,
+        sharpeRatio: result.portfolioMetrics.sharpeRatio,
+        maxDrawdown: result.portfolioMetrics.maxDrawdown,
+        winRate: result.portfolioMetrics.winRate || 0,
+        profitFactor: result.portfolioMetrics.profitFactor || 0,
+        totalTrades: result.portfolioMetrics.totalTrades || 0,
+        winningTrades: 0,
+        losingTrades: 0,
+        avgWin: 0,
+        avgLoss: 0,
+        bestTrade: 0,
+        worstTrade: 0,
+        avgHoldingPeriod: 0,
+        finalValue: result.portfolioMetrics.totalReturn * (config.initialCapital || this.DEFAULT_ACCOUNT_SIZE)
+      },
+      trades: [],
+      equityCurve: [],
+      dates: [],
+      status: 'completed' as const,
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString()
+    };
   }
 
   /**
@@ -89,7 +132,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
       });
 
       // Calculate correlations
-      const correlations = await this.calculateCorrelations(assetData);
+      // const correlations = await this.calculateCorrelations(assetData);
       
       // Update progress
       await this.updateProgress({
@@ -190,7 +233,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         }],
         rebalanceFrequency: 'monthly',
         startDate: this.getStartDate(60),
-        endDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0] || '',
         initialCapital: this.DEFAULT_ACCOUNT_SIZE
       };
       
@@ -213,7 +256,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         }],
         rebalanceFrequency: 'weekly', // More frequent for crypto
         startDate: this.getStartDate(30), // Shorter period for crypto
-        endDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0] || '',
         initialCapital: this.DEFAULT_ACCOUNT_SIZE * 0.2 // Smaller allocation
       };
       
@@ -237,15 +280,19 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         }],
         rebalanceFrequency: 'daily', // Options need daily management
         startDate: this.getStartDate(20),
-        endDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0] || '',
         initialCapital: this.DEFAULT_ACCOUNT_SIZE * 0.3
       };
       
       const result = await this.validatePortfolio(config);
       
       // Adjust metrics for options characteristics
-      result.portfolioMetrics.volatility *= 2; // Options are more volatile
-      result.portfolioMetrics.totalReturn *= 1.5; // Leverage effect
+      if (result.portfolioMetrics.volatility !== undefined) {
+        result.portfolioMetrics.volatility *= 2; // Options are more volatile
+      }
+      if (result.portfolioMetrics.totalReturn !== undefined) {
+        result.portfolioMetrics.totalReturn *= 1.5; // Leverage effect
+      }
       
       results.push({
         assetClass: 'option',
@@ -283,7 +330,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
       })),
       rebalanceFrequency: 'monthly',
       startDate: this.getStartDate(90),
-      endDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0] || '',
       initialCapital: this.DEFAULT_ACCOUNT_SIZE
     };
     
@@ -327,7 +374,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         const data = await this.getHistoricalData(
           asset.symbol,
           this.getStartDate(30),
-          new Date().toISOString().split('T')[0]
+          new Date().toISOString().split('T')[0] || ''
         );
         
         volatilities[asset.symbol] = this.calculateVolatility(data);
@@ -451,35 +498,6 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     return assetData;
   }
 
-  /**
-   * Calculate correlations between assets
-   */
-  private async calculateCorrelations(
-    assetData: Record<string, any>
-  ): Promise<AssetCorrelation[]> {
-    const correlations: AssetCorrelation[] = [];
-    const symbols = Object.keys(assetData);
-    
-    // Simple correlation calculation
-    // In production, this would be done in Python/numpy
-    for (let i = 0; i < symbols.length; i++) {
-      for (let j = i + 1; j < symbols.length; j++) {
-        const correlation = this.calculatePairCorrelation(
-          assetData[symbols[i]],
-          assetData[symbols[j]]
-        );
-        
-        correlations.push({
-          asset1: symbols[i],
-          asset2: symbols[j],
-          correlation,
-          period: '60d'
-        });
-      }
-    }
-    
-    return correlations;
-  }
 
   /**
    * Analyze current market regime
@@ -525,7 +543,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
    */
   private async optimizeAllocation(
     config: MultiAssetBacktestConfig,
-    result: MultiAssetBacktestResult,
+    _result: MultiAssetBacktestResult,
     regime: MarketRegime
   ): Promise<Record<string, number>> {
     const optimal: Record<string, number> = {};
@@ -566,8 +584,13 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     // Normalize weights
     const totalWeight = Object.values(optimal).reduce((a, b) => a + b, 0);
     
-    for (const symbol in optimal) {
-      optimal[symbol] /= totalWeight;
+    if (totalWeight > 0) {
+      for (const symbol in optimal) {
+        const weight = optimal[symbol];
+        if (weight !== undefined) {
+          optimal[symbol] = weight / totalWeight;
+        }
+      }
     }
     
     return optimal;
@@ -592,14 +615,6 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     return Math.sqrt(variance * 252); // Annualized
   }
 
-  /**
-   * Calculate correlation between two assets
-   */
-  private calculatePairCorrelation(data1: any, data2: any): number {
-    // Simplified correlation
-    // In production, use proper statistical calculation
-    return 0.3 + Math.random() * 0.4; // Placeholder: 0.3 to 0.7
-  }
 
   /**
    * Get asset class from symbol
@@ -661,12 +676,17 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     
     for (let i = 0; i < assets.length; i++) {
       for (let j = i + 1; j < assets.length; j++) {
-        correlations.push({
-          asset1: assets[i],
-          asset2: assets[j],
-          correlation: matrix[i][j],
-          period: '60d'
-        });
+        const correlation = matrix[i]?.[j];
+        const asset1 = assets[i];
+        const asset2 = assets[j];
+        if (correlation !== undefined && asset1 && asset2) {
+          correlations.push({
+            asset1,
+            asset2,
+            correlation,
+            period: '60d'
+          });
+        }
       }
     }
     
@@ -705,16 +725,24 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     
     // Cap individual positions
     for (const symbol in adjusted) {
-      if (adjusted[symbol] > constraints.maxPositionSize) {
-        adjusted[symbol] = constraints.maxPositionSize;
+      const currentSize = adjusted[symbol];
+      const maxSize = constraints?.maxPositionSize;
+      
+      if (currentSize !== undefined && maxSize !== undefined && currentSize > maxSize) {
+        adjusted[symbol] = maxSize;
       }
     }
     
     // Renormalize
     const total = Object.values(adjusted).reduce((a, b) => a + b, 0);
     
-    for (const symbol in adjusted) {
-      adjusted[symbol] /= total;
+    if (total > 0) {
+      for (const symbol in adjusted) {
+        const value = adjusted[symbol];
+        if (value !== undefined) {
+          adjusted[symbol] = value / total;
+        }
+      }
     }
     
     return adjusted;
@@ -763,6 +791,6 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
   private getStartDate(daysBack: number): string {
     const date = new Date();
     date.setDate(date.getDate() - daysBack);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split('T')[0] || '';
   }
 }

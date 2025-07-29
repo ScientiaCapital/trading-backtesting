@@ -493,7 +493,7 @@ export class AlpacaClient {
    */
   async getOptionContracts(params: OptionChainRequest): Promise<OptionContract[]> {
     const queryParams: Record<string, string | number | boolean> = {
-      underlying_symbol: params.underlyingSymbol
+      underlying_symbol: params.underlyingSymbol || params.underlyingSymbols
     };
     
     if (params.optionType) queryParams['option_type'] = params.optionType;
@@ -515,8 +515,8 @@ export class AlpacaClient {
     const self = this;
     return {
       async getLatestQuote(symbol: string): Promise<{ symbol: string; bid_price: number; ask_price: number; bid_size: number; ask_size: number; timestamp: string }> {
-        const response = await self.dataRequest(`/v2/stocks/${symbol}/quotes/latest`);
-        const quote = response.quote as any;
+        const response = await self.dataRequest<{ quote: any }>(`/v2/stocks/${symbol}/quotes/latest`);
+        const quote = response.quote;
         return {
           symbol,
           bid_price: quote.bp,
@@ -543,7 +543,7 @@ export class AlpacaClient {
   }
   
   // Options methods for OptionsFlowAnalyst
-  async getOptionChain(request: OptionChainRequest): Promise<{ snapshots: OptionContract[] }> {
+  async getOptionChain(_request: OptionChainRequest): Promise<{ snapshots: OptionContract[] }> {
     // Placeholder for options chain data
     // In production, this would call Alpaca's options API
     return { snapshots: [] };
@@ -557,10 +557,12 @@ export class AlpacaClient {
       askPrice: 0,
       bidSize: 0,
       askSize: 0,
+      lastPrice: 0,
+      lastSize: 0,
       volume: 0,
       openInterest: 0,
       impliedVolatility: 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date()
     };
   }
 }

@@ -3,7 +3,7 @@
  * Tests all major functionality
  */
 
-const API_BASE = 'http://localhost:8787/api/v1';
+const PLATFORM_API_BASE = 'http://localhost:8787/api/v1';
 
 // Color codes for console output
 const colors = {
@@ -15,7 +15,7 @@ const colors = {
   cyan: '\x1b[36m'
 };
 
-async function log(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') {
+async function log(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info'): Promise<void> {
   const colorMap = {
     info: colors.blue,
     success: colors.green,
@@ -25,7 +25,7 @@ async function log(message: string, type: 'info' | 'success' | 'error' | 'warnin
   console.log(`${colorMap[type]}${message}${colors.reset}`);
 }
 
-async function testEndpoint(name: string, method: string, endpoint: string, body?: any) {
+async function testEndpoint(name: string, method: string, endpoint: string, body?: any): Promise<any> {
   log(`\nTesting ${name}...`, 'info');
   
   try {
@@ -40,15 +40,15 @@ async function testEndpoint(name: string, method: string, endpoint: string, body
       options.body = JSON.stringify(body);
     }
     
-    const response = await fetch(`${API_BASE}${endpoint}`, options);
-    const data = await response.json();
+    const response = await fetch(`${PLATFORM_API_BASE}${endpoint}`, options);
+    const data = await response.json() as { success: boolean; data?: any; error?: { message: string } };
     
     if (data.success) {
       log(`✓ ${name} - SUCCESS`, 'success');
       console.log(JSON.stringify(data.data, null, 2));
       return data.data;
     } else {
-      log(`✗ ${name} - FAILED: ${data.error.message}`, 'error');
+      log(`✗ ${name} - FAILED: ${data.error?.message || 'Unknown error'}`, 'error');
       return null;
     }
   } catch (error) {
@@ -57,7 +57,7 @@ async function testEndpoint(name: string, method: string, endpoint: string, body
   }
 }
 
-async function runTests() {
+async function runTests(): Promise<void> {
   log('\n🚀 ULTRA Trading Platform Test Suite', 'info');
   log('=====================================\n', 'info');
   

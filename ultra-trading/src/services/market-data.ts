@@ -3,7 +3,8 @@
  * Handles stock and option quotes, historical data, and real-time streaming
  */
 
-import { MarketData, StockQuote, OptionQuote } from '@/types/market-data';
+import { MarketData, StockQuote } from '@/types/market-data';
+import { OptionQuote } from '@/types/options';
 import { AlpacaService } from './alpaca/trading-client';
 
 export interface MarketDataConfig {
@@ -17,19 +18,11 @@ export interface MarketDataConfig {
  * Provides access to real-time and historical market data
  */
 export class MarketDataService {
-  private readonly config: MarketDataConfig;
-  private readonly alpaca: AlpacaService;
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5000; // 5 seconds
 
   constructor(_alpaca: AlpacaService, _config: MarketDataConfig = {}) {
-    this.alpaca = _alpaca;
-    this.config = {
-      baseUrl: 'https://data.alpaca.markets',
-      apiVersion: 'v2',
-      maxRetries: 3,
-      ...config
-    };
+    // Parameters are prefixed with _ as they're not used in this mock implementation
   }
 
   /**
@@ -87,11 +80,14 @@ export class MarketDataService {
       volume: 1000,
       openInterest: 5000,
       impliedVolatility: 0.25,
-      delta: 0.5,
-      gamma: 0.05,
-      theta: -0.02,
-      vega: 0.10,
-      timestamp: new Date()
+      timestamp: new Date(),
+      greeks: {
+        delta: 0.5,
+        gamma: 0.05,
+        theta: -0.02,
+        vega: 0.10,
+        rho: 0.01
+      }
     };
   }
 
@@ -113,6 +109,13 @@ export class MarketDataService {
       low: price,
       close: price
     };
+  }
+  
+  /**
+   * Get latest market snapshot (alias for getLatestData)
+   */
+  async getLatestSnapshot(symbol: string): Promise<MarketData> {
+    return this.getLatestData(symbol);
   }
 
   /**

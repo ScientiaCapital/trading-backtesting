@@ -34,6 +34,7 @@ export interface Signal {
     maxLoss: number;
     probability: number;
   };
+  timestamp?: number;
 }
 
 export interface ValidationResult {

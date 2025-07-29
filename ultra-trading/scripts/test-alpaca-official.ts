@@ -12,13 +12,13 @@ dotenv.config({ path: '../../.env' });
 console.log('🔍 Testing Alpaca with Official SDK\n');
 
 const alpaca = new Alpaca({
-  keyId: process.env.ALPACA_API_KEY || 'PKYN9OAQHP1IR05GGAGL',
-  secretKey: process.env.ALPACA_API_SECRET || 'tfezhnS1NvEtu8eT6BkW3fLd1wKIi0Ygc5HILoBl',
+  keyId: 'PKYN9OAQHP1IR05GGAGL',
+  secretKey: 'tfezhnS1NvEtu8eT6BkW3fLd1wKIi0Ygc5HILoBl',
   paper: true,
   baseUrl: 'https://paper-api.alpaca.markets'
 });
 
-async function testOfficialSDK() {
+async function testOfficialSDK(): Promise<void> {
   try {
     console.log('📊 Getting Account Info...');
     const account = await alpaca.getAccount();

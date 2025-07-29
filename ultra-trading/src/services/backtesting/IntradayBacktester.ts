@@ -8,8 +8,7 @@ import type {
   BacktestConfig, 
   BacktestResult,
   BacktestMetrics,
-  BacktestRequest,
-  StrategyParameters
+  BacktestRequest
 } from '../../types/backtesting';
 import { FastquantBacktesterBase } from './FastquantBacktesterBase';
 import { AppError } from '../../utils';
@@ -63,16 +62,40 @@ export class IntradayBacktester extends FastquantBacktesterBase {
    * Execute intraday backtest with 1-minute data
    */
   async execute(config: BacktestConfig): Promise<BacktestResult> {
-    // Ensure we're using 1-minute timeframe
-    const intradayConfig = {
-      ...config,
-      parameters: {
-        ...config.parameters,
-        timeframe: '1m'
-      }
-    };
+    // Get 1-minute data
+    const ohlcvData = await this.getHistoricalData(
+      config.symbol,
+      config.startDate,
+      config.endDate,
+      '1m'
+    );
 
-    return super.execute(intradayConfig);
+    // Prepare request
+    const request: BacktestRequest = {
+      type: 'single',
+      config: {
+        ...config,
+        parameters: {
+          ...config.parameters
+        }
+      },
+      requestId: this.generateBacktestId()
+    };
+    
+    (request as any).data = ohlcvData;
+
+    // Execute backtest
+    const response = await this.executePythonBacktest(request);
+    
+    if (!response.success || !response.result) {
+      throw new AppError(
+        'BACKTEST_FAILED',
+        response.error || 'Intraday backtest failed',
+        500
+      );
+    }
+
+    return response.result as BacktestResult;
   }
 
   /**
@@ -89,8 +112,8 @@ export class IntradayBacktester extends FastquantBacktesterBase {
 
     const config: BacktestConfig = {
       symbol,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split('T')[0] || '',
+      endDate: endDate.toISOString().split('T')[0] || '',
       strategy: 'OPENING_RANGE',
       parameters: {
         openingRangeMinutes: parameters?.openingRangeMinutes || 30,
@@ -150,8 +173,8 @@ export class IntradayBacktester extends FastquantBacktesterBase {
 
     const config: BacktestConfig = {
       symbol,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split('T')[0] || '',
+      endDate: endDate.toISOString().split('T')[0] || '',
       strategy: 'VWAP_REVERSION',
       parameters: {
         vwapStdDev: parameters?.vwapStdDev || 2.0,
@@ -208,8 +231,8 @@ export class IntradayBacktester extends FastquantBacktesterBase {
 
     const config: BacktestConfig = {
       symbol,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split('T')[0] || '',
+      endDate: endDate.toISOString().split('T')[0] || '',
       strategy: 'RSI_EXTREMES',
       parameters: {
         rsiPeriod: parameters?.rsiPeriod || 5, // Short period for 1-min
@@ -339,8 +362,8 @@ export class IntradayBacktester extends FastquantBacktesterBase {
     const requiredTrades = Math.ceil(this.DAILY_TARGET / avgDollarProfitPerTrade);
     
     // Calculate required win rate
-    const breakEvenWinRate = Math.abs(metrics.avgLoss) / 
-                            (Math.abs(metrics.avgLoss) + metrics.avgWin);
+    // const breakEvenWinRate = Math.abs(metrics.avgLoss) / 
+    //                         (Math.abs(metrics.avgLoss) + metrics.avgWin);
     const targetWinRate = this.calculateRequiredWinRate(
       this.DAILY_TARGET,
       requiredTrades,
@@ -468,17 +491,19 @@ export class IntradayBacktester extends FastquantBacktesterBase {
       recommendations.push('Focus on higher probability setups');
     } else {
       const best = validations[0];
-      recommendations.push(
-        `Focus on ${best.strategy} strategy for ${best.symbol} ` +
-        `(${(best.feasibilityScore * 100).toFixed(0)}% feasibility)`
-      );
-      
-      if (best.requiredTrades > 20) {
-        recommendations.push('High trade frequency required - ensure low latency execution');
-      }
-      
-      if (best.winRateNeeded > 0.6) {
-        recommendations.push('High win rate needed - be selective with entries');
+      if (best) {
+        recommendations.push(
+          `Focus on ${best.strategy} strategy for ${best.symbol} ` +
+          `(${(best.feasibilityScore * 100).toFixed(0)}% feasibility)`
+        );
+        
+        if (best.requiredTrades > 20) {
+          recommendations.push('High trade frequency required - ensure low latency execution');
+        }
+        
+        if (best.winRateNeeded > 0.6) {
+          recommendations.push('High win rate needed - be selective with entries');
+        }
       }
     }
     
@@ -500,14 +525,14 @@ export class IntradayBacktester extends FastquantBacktesterBase {
   async scheduleNightlyRun(time: string = '21:00'): Promise<void> {
     const scheduledTime = new Date();
     const [hours, minutes] = time.split(':').map(Number);
-    scheduledTime.setHours(hours, minutes, 0, 0);
+    scheduledTime.setHours(hours || 21, minutes || 0, 0, 0);
     
     // If time has passed today, schedule for tomorrow
     if (scheduledTime < new Date()) {
       scheduledTime.setDate(scheduledTime.getDate() + 1);
     }
     
-    const delay = scheduledTime.getTime() - Date.now();
+    // const delay = scheduledTime.getTime() - Date.now();
     
     console.log(
       `[${this.requestId}] Scheduling nightly backtest for ${scheduledTime.toISOString()}`

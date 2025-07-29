@@ -6,7 +6,6 @@
 
 import { CloudflareBindings } from '@/types';
 import { createLogger } from '@/utils';
-import { MarketData, Position } from '@/types/strategy';
 
 export interface MarketDataChunk {
   symbol: string;
@@ -122,8 +121,8 @@ export class ContextualEmbeddingsService {
     let context = '';
 
     // Volume context
-    if (chunk.volume && chunk.metadata?.avgVolume) {
-      const volumeRatio = chunk.volume / chunk.metadata.avgVolume;
+    if (chunk.volume && chunk.metadata?.['avgVolume']) {
+      const volumeRatio = chunk.volume / chunk.metadata['avgVolume'];
       if (volumeRatio > 2) {
         context += 'Unusually high volume. ';
       } else if (volumeRatio < 0.5) {
@@ -132,16 +131,16 @@ export class ContextualEmbeddingsService {
     }
 
     // Price movement context
-    if (chunk.metadata?.dayChange) {
-      const change = chunk.metadata.dayChange;
+    if (chunk.metadata?.['dayChange']) {
+      const change = chunk.metadata['dayChange'];
       if (Math.abs(change) > 5) {
         context += `Significant ${change > 0 ? 'gain' : 'loss'} of ${Math.abs(change).toFixed(2)}%. `;
       }
     }
 
     // Market regime
-    if (chunk.metadata?.vix) {
-      const vix = chunk.metadata.vix;
+    if (chunk.metadata?.['vix']) {
+      const vix = chunk.metadata['vix'];
       if (vix > 30) {
         context += 'High volatility environment. ';
       } else if (vix < 15) {
@@ -171,23 +170,26 @@ export class ContextualEmbeddingsService {
    * Generate technical analysis context
    */
   private async generateTechnicalContext(chunk: MarketDataChunk): Promise<string> {
-    if (!chunk.metadata?.technicals) return '';
+    if (!chunk.metadata?.['technicals']) return '';
 
-    const { rsi, macd, bollingerBands } = chunk.metadata.technicals;
+    const technicals = chunk.metadata['technicals'];
     let context = '';
 
-    if (rsi) {
+    if (technicals['rsi']) {
+      const rsi = technicals['rsi'];
       if (rsi > 70) context += 'RSI indicates overbought conditions. ';
       else if (rsi < 30) context += 'RSI indicates oversold conditions. ';
     }
 
-    if (macd?.signal) {
-      if (macd.histogram > 0) context += 'MACD bullish. ';
+    if (technicals['macd']?.['signal']) {
+      const macd = technicals['macd'];
+      if (macd['histogram'] > 0) context += 'MACD bullish. ';
       else context += 'MACD bearish. ';
     }
 
-    if (bollingerBands) {
-      const { upper, lower, middle } = bollingerBands;
+    if (technicals['bollingerBands']) {
+      const bollingerBands = technicals['bollingerBands'];
+      const { upper, lower } = bollingerBands;
       if (chunk.price > upper) context += 'Price above upper Bollinger Band. ';
       else if (chunk.price < lower) context += 'Price below lower Bollinger Band. ';
     }
@@ -199,9 +201,11 @@ export class ContextualEmbeddingsService {
    * Generate sentiment context from news/social
    */
   private async generateSentimentContext(chunk: MarketDataChunk): Promise<string> {
-    if (!chunk.metadata?.sentiment) return '';
+    if (!chunk.metadata?.['sentiment']) return '';
 
-    const { score, sources } = chunk.metadata.sentiment;
+    const sentiment = chunk.metadata['sentiment'];
+    const score = sentiment['score'];
+    const sources = sentiment['sources'];
     let context = '';
 
     if (score > 0.7) context += 'Strong positive sentiment. ';
@@ -266,7 +270,7 @@ export class ContextualEmbeddingsService {
 
       return {
         ...chunk,
-        embeddings: embeddings.data[0]
+        embeddings: (embeddings as any).data?.[0] || embeddings
       };
     } catch (error) {
       this.logger.error('Failed to generate embeddings', { error });

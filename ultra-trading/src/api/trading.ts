@@ -439,7 +439,7 @@ tradingRoutes.get('/options/chains/:symbol', async (c) => {
     
     const alpaca = new AlpacaClient(c.env, c.req.header('X-Tenant-ID') || 'default');
     const options = await alpaca.getOptionContracts({
-      underlyingSymbol: symbol,
+      underlyingSymbols: symbol, // Note: API expects plural form
       ...query
     });
     

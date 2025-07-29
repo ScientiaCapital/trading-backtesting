@@ -253,7 +253,7 @@ export class BacktestScheduler {
             })),
             rebalanceFrequency: 'monthly',
             startDate: this.getStartDate(30),
-            endDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0] || '',
             initialCapital: 200000
           });
           break;
@@ -329,7 +329,7 @@ export class BacktestScheduler {
     const [hours, minutes] = schedule.time.split(':').map(Number);
     
     const nextRun = new Date();
-    nextRun.setHours(hours, minutes, 0, 0);
+    nextRun.setHours(hours || 0, minutes || 0, 0, 0);
     
     // If time has passed today, move to next occurrence
     if (nextRun <= now) {
@@ -437,6 +437,6 @@ export class BacktestScheduler {
   private getStartDate(daysBack: number): string {
     const date = new Date();
     date.setDate(date.getDate() - daysBack);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split('T')[0] || '';
   }
 }

@@ -226,10 +226,10 @@ export abstract class FastquantBacktesterBase {
     const durableObjectId = this.env.TRADING_SESSION.idFromName(progress.backtestId);
     const durableObject = this.env.TRADING_SESSION.get(durableObjectId);
     
-    await durableObject.fetch(new Request('http://internal/progress', {
+    await durableObject.fetch('http://internal/progress', {
       method: 'POST',
       body: JSON.stringify(progress)
-    }));
+    });
   }
 
   /**

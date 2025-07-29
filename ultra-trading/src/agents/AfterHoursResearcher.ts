@@ -8,10 +8,9 @@ import type {
   CloudflareBindings, 
   AgentConfig, 
   AgentResponse,
-  AgentType,
-  AgentMessage,
-  MessagePriority
+  AgentMessage
 } from '../types';
+import { AgentType, MessagePriority } from '../types/agents';
 import type { StrategyParameters } from '../types/backtesting';
 import { FastquantBacktester } from '../services/backtesting/FastquantBacktester';
 import { AlpacaTradingService } from '../services/alpaca/AlpacaTradingService';
@@ -94,11 +93,11 @@ interface RiskRecommendation {
 }
 
 export class AfterHoursResearcher extends AIAgent {
-  private backtester: FastquantBacktester;
-  private tradingService: AlpacaTradingService;
-  private marketData: AlpacaMarketData;
-  private optionsAnalyst: OptionsFlowAnalyst;
-  private tradingTime: TradingTime;
+  private backtester!: FastquantBacktester;
+  private tradingService!: AlpacaTradingService;
+  private marketData!: AlpacaMarketData;
+  private optionsAnalyst!: OptionsFlowAnalyst;
+  private tradingTime!: TradingTime;
 
   protected env!: CloudflareBindings;
   protected requestId!: string;
@@ -130,30 +129,29 @@ export class AfterHoursResearcher extends AIAgent {
     interface ExtendedMessage extends AgentMessage {
       env?: CloudflareBindings;
       requestId?: string;
-      priority?: MessagePriority;
     }
     const extMessage = message as ExtendedMessage;
     if (!this.env && extMessage.env) {
       this.setEnvironment(extMessage.env, extMessage.requestId || this.id);
     }
     
-    const response = await this.processAfterHoursMessage(message);
+    const response = await this.processAfterHoursMessage(message.payload as { forceRun?: boolean });
     return this.createMessage(
       message.from,
       'ANALYSIS_RESULT',
       response,
-      extMessage.priority || MessagePriority.NORMAL
+      message.priority || MessagePriority.NORMAL
     );
   }
   
-  async processAfterHoursMessage(message: { forceRun?: boolean }): Promise<AgentResponse> {
+  async processAfterHoursMessage(payload: { forceRun?: boolean }): Promise<AgentResponse> {
     try {
       // Check if it's after hours (after 4:30 PM ET)
       const now = this.tradingTime.getCurrentEasternTime();
       const activationTime = new Date(now);
       activationTime.setHours(16, 30, 0, 0); // 4:30 PM ET
 
-      if (now < activationTime && !message.forceRun) {
+      if (now < activationTime && !payload.forceRun) {
         return {
           success: true,
           action: 'WAIT',
@@ -365,7 +363,7 @@ export class AfterHoursResearcher extends AIAgent {
   }
 
   private async generateWatchlist(
-    todaysSummary: AfterHoursAnalysis['todaysSummary'],
+    _todaysSummary: AfterHoursAnalysis['todaysSummary'],
     odteSetups: OptionSetup[],
     optimizedStrategies: StrategyRecommendation[]
   ): Promise<WatchlistItem[]> {

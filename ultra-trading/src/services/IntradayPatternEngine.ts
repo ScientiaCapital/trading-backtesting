@@ -101,7 +101,7 @@ export class IntradayPatternEngine {
         this.detectOpeningRangeBreakout(symbol, bars),
         this.detectVWAPBands(symbol, marketData, bars),
         this.detectMomentumIgnition(symbol, marketData, bars),
-        this.detectMeanReversion(symbol, marketData, bars),
+        this.detectMeanReversion(symbol, marketData),
         this.detectSupportResistance(symbol, bars)
       ]);
 
@@ -207,8 +207,8 @@ export class IntradayPatternEngine {
         type: PatternType.OPENING_RANGE_BREAKOUT,
         symbol,
         confidence: this.calculateBreakoutConfidence(
-          range.low,
           currentBar.close,
+          range.low,
           volumeRatio
         ),
         entryPrice: currentBar.close,
@@ -422,7 +422,18 @@ export class IntradayPatternEngine {
     this.updateSupportResistanceLevels(symbol, bars);
     
     const levels = this.supportResistanceLevels.get(symbol) || [];
-    const currentPrice = bars[bars.length - 1].close;
+    
+    // Check if we have bars data
+    if (bars.length === 0) {
+      return null;
+    }
+    
+    const lastBar = bars[bars.length - 1];
+    if (!lastBar) {
+      return null;
+    }
+    
+    const currentPrice = lastBar.close;
     
     // Find nearest levels
     const nearestSupport = levels
@@ -499,7 +510,11 @@ export class IntradayPatternEngine {
     // Find levels with multiple touches
     pricePoints.forEach((touches, price) => {
       if (touches >= 3) {
-        const currentPrice = bars[bars.length - 1].close;
+        // Ensure we have bars before accessing
+        const lastBar = bars[bars.length - 1];
+        if (!lastBar) return;
+        
+        const currentPrice = lastBar.close;
         const type = price > currentPrice ? 'resistance' : 'support';
         
         levels.push({
@@ -532,7 +547,13 @@ export class IntradayPatternEngine {
       cumulativeVolume += bar.volume;
     });
 
-    return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : bars[bars.length - 1].close;
+    if (cumulativeVolume > 0) {
+      return cumulativeTPV / cumulativeVolume;
+    }
+    
+    // Fallback to last close price if available
+    const lastBar = bars[bars.length - 1];
+    return lastBar ? lastBar.close : 0;
   }
 
   /**
@@ -546,8 +567,17 @@ export class IntradayPatternEngine {
 
     // Calculate initial average gain/loss
     for (let i = 1; i <= period; i++) {
-      const change = (marketData[i].close || marketData[i].price) - 
-                    (marketData[i - 1].close || marketData[i - 1].price);
+      const current = marketData[i];
+      const previous = marketData[i - 1];
+      
+      if (!current || !previous) continue;
+      
+      const currentPrice = current.close ?? current.price;
+      const previousPrice = previous.close ?? previous.price;
+      
+      if (currentPrice === undefined || previousPrice === undefined) continue;
+      
+      const change = currentPrice - previousPrice;
       if (change > 0) {
         gains += change;
       } else {
@@ -575,9 +605,14 @@ export class IntradayPatternEngine {
     const trueRanges: number[] = [];
     
     for (let i = 1; i < bars.length; i++) {
-      const {high} = bars[i];
-      const {low} = bars[i];
-      const prevClose = bars[i - 1].close;
+      const currentBar = bars[i];
+      const prevBar = bars[i - 1];
+      
+      if (!currentBar || !prevBar) continue;
+      
+      const high = currentBar.high ?? 0;
+      const low = currentBar.low ?? 0;
+      const prevClose = prevBar.close;
       
       const tr = Math.max(
         high - low,

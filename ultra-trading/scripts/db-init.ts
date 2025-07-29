@@ -38,9 +38,13 @@ function executeCommand(command: string, description: string) {
     const output = execSync(command, { encoding: 'utf-8', stdio: 'pipe' });
     console.log(`✅ Success: ${description}`);
     return output;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`❌ Failed: ${description}`);
-    console.error(error.message);
+    if (error instanceof Error) {
+      console.error(error.message);
+    } else {
+      console.error('Unknown error:', error);
+    }
     throw error;
   }
 }
@@ -62,8 +66,8 @@ function createDatabase(env: Environment) {
       console.log(`🔧 Update your wrangler.jsonc with this ID for ${env.name} environment`);
     }
     
-  } catch (error: any) {
-    if (error.message.includes('already exists')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('already exists')) {
       console.log(`ℹ️  Database '${env.dbName}' already exists`);
     } else {
       throw error;
@@ -78,7 +82,8 @@ function runMigrations(env: Environment) {
   
   try {
     // Check if migration file exists
-    const migrationSQL = readFileSync(migrationFile, 'utf-8');
+    // Check if migration file exists
+    readFileSync(migrationFile, 'utf-8');
     console.log(`📖 Found migration file: ${migrationFile}`);
     
     // Run the migration
@@ -91,8 +96,8 @@ function runMigrations(env: Environment) {
       `Applying initial schema to ${env.name} database`
     );
     
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
       console.error(`❌ Migration file not found: ${migrationFile}`);
     } else {
       throw error;
@@ -142,7 +147,7 @@ INSERT OR IGNORE INTO users (id, email, name, tenant_id, role) VALUES
 
 async function main() {
   console.log('🚀 ULTRA Trading Platform - Database Initialization');
-  console.log('=' * 60);
+  console.log('='.repeat(60));
   
   const args = process.argv.slice(2);
   const environmentFilter = args[0];

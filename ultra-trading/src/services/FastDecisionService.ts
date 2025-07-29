@@ -392,7 +392,7 @@ export class FastDecisionService {
   ): number {
     // Calculate current exposure
     const currentExposure = positions.reduce((sum, pos) => 
-      sum + Math.abs(parseFloat(pos.market_value)), 0
+      sum + Math.abs(parseFloat((pos as any).market_value || '0')), 0
     );
     const exposurePercent = currentExposure / accountValue;
     
@@ -475,6 +475,8 @@ export class FastDecisionService {
       stopLoss,
       takeProfit,
       reasoning,
+      timestamp: Date.now(),
+      signals: [],
       metadata: {
         source: 'smart_fast_decision',
         score: score.toFixed(3),
@@ -538,12 +540,18 @@ export class FastDecisionService {
     marketData: MarketSnapshot[],
     context: MarketContext
   ): TradingDecision | null {
+    if (!marketData[0]) return null;
     const cacheKey = this.getCacheKey(marketData[0], context);
     const cached = this.signalCache.get(cacheKey);
     
     if (cached && Date.now() - cached.timestamp < cached.ttl) {
       // Validate that market conditions haven't changed dramatically
-      const currentSpread = (marketData[0].ask - marketData[0].bid) / marketData[0].price;
+      const firstData = marketData[0];
+      if (firstData?.ask === undefined || firstData.bid === undefined || firstData.price === undefined) {
+        return null;
+      }
+      
+      const currentSpread = (firstData.ask - firstData.bid) / firstData.price;
       const maxSpreadChange = 0.0005; // 0.05% change tolerance
       
       if (Math.abs(currentSpread - this.THRESHOLDS.spread.normal) < maxSpreadChange) {
@@ -657,6 +665,8 @@ export class FastDecisionService {
       symbol: '',
       confidence: 0,
       reasoning: reason,
+      timestamp: Date.now(),
+      signals: [],
       metadata: { 
         source: 'smart_fast_decision',
         reason 

@@ -31,13 +31,6 @@ interface PythonImport {
   alias?: string;
 }
 
-interface StrategyConfig {
-  name: string;
-  parameters: Record<string, any>;
-  requiredData: string[];
-  dependencies: string[];
-}
-
 /**
  * Main converter class for transforming Jupyter notebooks to TypeScript
  */
@@ -52,17 +45,7 @@ export class NotebookToTypeScriptConverter {
     ['alpaca.data.historical', '@/services/alpaca/market-data']
   ]);
 
-  private pythonToTsTypes: Map<string, string> = new Map([
-    ['float', 'number'],
-    ['int', 'number'],
-    ['str', 'string'],
-    ['bool', 'boolean'],
-    ['list', 'Array'],
-    ['dict', 'Record'],
-    ['None', 'null'],
-    ['pd.DataFrame', 'DataFrame'],
-    ['np.array', 'number[]']
-  ]);
+  // Removed unused pythonToTsTypes - can be added back when type conversion is implemented
 
   /**
    * Convert a Jupyter notebook file to TypeScript strategy
@@ -121,8 +104,8 @@ export class NotebookToTypeScriptConverter {
     const imports = this.extractImports(code);
     imports.forEach(imp => this.convertImport(imp, result));
 
-    // Extract configuration
-    const config = this.extractConfiguration(code);
+    // Extract configuration - TODO: Implement when needed
+    // const config = this.extractConfiguration(code);
     
     // Extract functions
     const functions = this.extractFunctions(code);
@@ -131,9 +114,8 @@ export class NotebookToTypeScriptConverter {
       result.helperFunctions.push(tsFunction);
     });
 
-    // Extract trading logic
-    const tradingLogic = this.extractTradingLogic(code);
-    // Process trading logic...
+    // Extract trading logic - TODO: Implement when needed
+    // const tradingLogic = this.extractTradingLogic(code);
   }
 
   /**
@@ -151,16 +133,18 @@ export class NotebookToTypeScriptConverter {
         // from X import Y, Z
         imports.push({
           module: fromModule,
-          items: importItems.split(',').map(item => item.trim())
+          items: importItems ? importItems.split(',').map(item => item.trim()) : []
         });
       } else {
         // import X as Y
-        const parts = importItems.split(' as ');
-        imports.push({
-          module: parts[0].trim(),
-          items: [],
-          alias: parts[1]?.trim()
-        });
+        const parts = importItems ? importItems.split(' as ') : [];
+        if (parts[0]) {
+          imports.push({
+            module: parts[0].trim(),
+            items: [],
+            alias: parts[1]?.trim()
+          });
+        }
       }
     }
     
@@ -181,34 +165,6 @@ export class NotebookToTypeScriptConverter {
     }
   }
 
-  /**
-   * Extract configuration from code
-   */
-  private extractConfiguration(code: string): StrategyConfig {
-    const config: StrategyConfig = {
-      name: '',
-      parameters: {},
-      requiredData: [],
-      dependencies: []
-    };
-
-    // Extract variable assignments for configuration
-    const configRegex = /^(\w+)\s*=\s*(.+)$/gm;
-    let match;
-    
-    while ((match = configRegex.exec(code)) !== null) {
-      const [, varName, value] = match;
-      
-      // Common configuration variables
-      if (['underlying_symbol', 'symbol', 'ticker'].includes(varName.toLowerCase())) {
-        config.parameters.symbol = this.convertPythonValue(value);
-      } else if (varName.includes('threshold') || varName.includes('limit')) {
-        config.parameters[this.camelCase(varName)] = this.convertPythonValue(value);
-      }
-    }
-
-    return config;
-  }
 
   /**
    * Extract Python functions from code
@@ -234,6 +190,7 @@ export class NotebookToTypeScriptConverter {
     if (!signatureMatch) return '';
 
     const [, funcName, params] = signatureMatch;
+    if (!funcName) return '';
     
     // Convert parameters
     const tsParams = this.convertParameters(params);
@@ -257,10 +214,10 @@ ${tsBody}
   /**
    * Convert Python parameters to TypeScript
    */
-  private convertParameters(params: string): string {
-    if (!params.trim()) return '';
+  private convertParameters(params: string | undefined): string {
+    if (!params?.trim()) return '';
     
-    return params
+    return params!
       .split(',')
       .map(param => {
         const trimmed = param.trim();
@@ -281,7 +238,8 @@ ${tsBody}
   /**
    * Convert Python body to TypeScript
    */
-  private convertPythonBody(body: string): string {
+  private convertPythonBody(body: string | undefined): string {
+    if (!body) return '';
     let tsBody = body;
     
     // Convert print statements
@@ -306,27 +264,6 @@ ${tsBody}
     return tsBody;
   }
 
-  /**
-   * Extract trading logic patterns
-   */
-  private extractTradingLogic(code: string): any {
-    // Look for common trading patterns
-    const patterns = {
-      orderSubmission: /trading_client\.submit_order\(/g,
-      positionCheck: /get_all_positions\(/g,
-      marketData: /get_stock_latest_trade\(/g,
-      optionChain: /get_option_contracts\(/g,
-      greeksCalculation: /calculate_(?:delta|gamma|theta|vega)\(/g
-    };
-
-    const found: Record<string, boolean> = {};
-    
-    for (const [key, pattern] of Object.entries(patterns)) {
-      found[key] = pattern.test(code);
-    }
-
-    return found;
-  }
 
   /**
    * Generate TypeScript strategy class
@@ -407,35 +344,16 @@ export interface ${name}Config {
 }`;
   }
 
-  /**
-   * Helper utilities
-   */
-  private convertPythonValue(value: string): any {
-    // Remove quotes
-    if (value.startsWith('"') || value.startsWith("'")) {
-      return value.slice(1, -1);
-    }
-    
-    // Check for numbers
-    if (!isNaN(Number(value))) {
-      return Number(value);
-    }
-    
-    // Check for booleans
-    if (value === 'True') return true;
-    if (value === 'False') return false;
-    if (value === 'None') return null;
-    
-    return value;
-  }
 
-  private camelCase(str: string): string {
+  private camelCase(str: string | undefined): string {
+    if (!str) return '';
     return str
       .toLowerCase()
       .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
-  private inferReturnType(body: string): string {
+  private inferReturnType(body: string | undefined): string {
+    if (!body) return 'void';
     if (body.includes('return') && body.includes('[')) return 'any[]';
     if (body.includes('return') && body.includes('{')) return 'Record<string, any>';
     if (body.includes('return') && body.includes('True')) return 'boolean';
@@ -461,14 +379,14 @@ async function main() {
 
   try {
     console.log(`Converting ${inputPath}...`);
-    const result = await converter.convertNotebook(inputPath);
+    const result = await converter.convertNotebook(inputPath!);
     
-    await fs.writeFile(outputPath, result.classDefinition);
+    await fs.writeFile(outputPath!, result.classDefinition);
     console.log(`✅ Successfully converted to ${outputPath}`);
     
     // Write helper files if needed
     if (result.testCases.length > 0) {
-      const testPath = outputPath.replace('.ts', '.test.ts');
+      const testPath = outputPath!.replace('.ts', '.test.ts');
       await fs.writeFile(testPath, result.testCases.join('\n\n'));
       console.log(`✅ Created test file: ${testPath}`);
     }

@@ -8,13 +8,6 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-interface SetupStep {
-  name: string;
-  description: string;
-  command: string;
-  optional?: boolean;
-}
-
 function executeCommand(command: string, description: string, optional = false) {
   console.log(`\n🔄 ${description}...`);
   try {
@@ -51,7 +44,7 @@ function updateWranglerConfig(resourceIds: Record<string, string>) {
 
 async function main() {
   console.log('🚀 ULTRA Trading Platform - Complete Cloudflare Setup');
-  console.log('=' * 60);
+  console.log('='.repeat(60));
   
   const resourceIds: Record<string, string> = {};
   
@@ -88,7 +81,7 @@ async function main() {
           db.env === 'staging' ? 
             'YOUR_STAGING_D1_DATABASE_ID' : 
             'YOUR_PRODUCTION_D1_DATABASE_ID';
-        resourceIds[key] = idMatch[1];
+        resourceIds[key] = idMatch[1] || '';
         console.log(`📋 Database ID: ${idMatch[1]}`);
       }
     } catch (error: any) {
@@ -118,7 +111,7 @@ async function main() {
         const key = env === 'staging' ? 
           'YOUR_STAGING_KV_NAMESPACE_ID' : 
           'YOUR_PRODUCTION_KV_NAMESPACE_ID';
-        resourceIds[key] = prodIdMatch[1];
+        resourceIds[key] = prodIdMatch[1]!;
         console.log(`📋 ${env} KV ID: ${prodIdMatch[1]}`);
       }
     } catch (error: any) {

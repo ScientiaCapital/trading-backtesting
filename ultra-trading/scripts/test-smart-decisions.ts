@@ -3,7 +3,7 @@
  * Validates decision quality improvements
  */
 
-const API_BASE = process.env.API_BASE || 'https://ultra-trading.tkipper.workers.dev/api/v1';
+const SMART_API_BASE = 'https://ultra-trading.tkipper.workers.dev/api/v1';
 
 // Sample market data scenarios
 const marketScenarios = {
@@ -119,14 +119,14 @@ const marketScenarios = {
   }
 };
 
-async function testDecision(scenario: any) {
+async function testDecision(scenario: any): Promise<void> {
   console.log(`\n📊 Testing: ${scenario.name}`);
   console.log('─'.repeat(50));
   
   const startTime = Date.now();
   
   try {
-    const response = await fetch(`${API_BASE}/agents/decision`, {
+    const response = await fetch(`${SMART_API_BASE}/agents/decision`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -142,7 +142,14 @@ async function testDecision(scenario: any) {
       })
     });
     
-    const decision = await response.json();
+    const decision = await response.json() as {
+      action: string;
+      confidence: number;
+      reasoning: string;
+      stopLoss?: number;
+      takeProfit?: number;
+      metadata?: any;
+    };
     const elapsed = Date.now() - startTime;
     
     console.log(`⏱️  Response Time: ${elapsed}ms`);
@@ -212,7 +219,7 @@ function validateDecision(scenario: any, decision: any) {
   }
 }
 
-async function compareServices() {
+async function compareServices(): Promise<void> {
   console.log('\n🔄 Comparing Fast vs Smart Decision Services');
   console.log('='.repeat(60));
   
@@ -227,12 +234,12 @@ async function compareServices() {
   await testDecision(testScenario);
 }
 
-async function runAllTests() {
+async function runAllTests(): Promise<void> {
   console.log('🚀 Smart Fast Decision Service Test Suite');
   console.log('=========================================\n');
   
   // Test each scenario
-  for (const [key, scenario] of Object.entries(marketScenarios)) {
+  for (const [_key, scenario] of Object.entries(marketScenarios)) {
     await testDecision(scenario);
     await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limiting
   }

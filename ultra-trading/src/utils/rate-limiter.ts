@@ -27,8 +27,10 @@ export class RateLimiter {
 
     if (validRequests.length >= this.config.maxRequests) {
       const oldestRequest = validRequests[0];
-      const waitTime = this.config.windowMs - (now - oldestRequest);
-      throw new RateLimitError(waitTime);
+      if (oldestRequest !== undefined) {
+        const waitTime = this.config.windowMs - (now - oldestRequest);
+        throw new RateLimitError(waitTime);
+      }
     }
 
     // Add current request

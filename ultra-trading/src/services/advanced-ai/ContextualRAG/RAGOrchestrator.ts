@@ -76,8 +76,8 @@ export class RAGOrchestratorService {
 
       // Step 3: Parallel retrieval with embeddings and BM25
       const [embeddingResults, bm25Results] = await Promise.all([
-        this.retrieveByEmbeddings(query, contextualChunks),
-        this.retrieveByBM25(query, contextualChunks)
+        this.retrieveByEmbeddings(query, contextualChunks as any),
+        this.retrieveByBM25(query, contextualChunks as any)
       ]);
 
       // Step 4: Combine and score results
@@ -116,7 +116,7 @@ export class RAGOrchestratorService {
     if (query.symbols && query.symbols.length > 0) {
       for (const symbol of query.symbols) {
         const key = `market_chunks:${symbol}`;
-        const data = await this.env.KV.get(key, 'json');
+        const data = await this.env.KV?.get(key, 'json');
         if (data) {
           chunks.push(...(data as MarketDataChunk[]));
         }
@@ -244,7 +244,7 @@ export class RAGOrchestratorService {
       '@cf/baai/bge-base-en-v1.5',
       { text: query }
     );
-    return response.data[0];
+    return (response as any).data?.[0] || response;
   }
 
   /**
@@ -260,9 +260,14 @@ export class RAGOrchestratorService {
     let normB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      const aVal = a[i];
+      const bVal = b[i];
+      
+      if (aVal === undefined || bVal === undefined) continue;
+      
+      dotProduct += aVal * bVal;
+      normA += aVal * aVal;
+      normB += bVal * bVal;
     }
 
     normA = Math.sqrt(normA);

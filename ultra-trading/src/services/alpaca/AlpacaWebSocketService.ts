@@ -121,10 +121,6 @@ export class AlpacaWebSocketService {
   private state: ConnectionState = ConnectionState.DISCONNECTED;
   private handlers: WebSocketHandlers = {};
   private subscriptions: SubscriptionRequest = {};
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
-  private maxReconnectDelay = 30000; // Max 30 seconds
   private pingInterval: number | null = null;
   private readonly logger;
   private readonly env: CloudflareBindings;
@@ -219,7 +215,6 @@ export class AlpacaWebSocketService {
     }
 
     this.state = ConnectionState.DISCONNECTED;
-    this.reconnectAttempts = 0;
 
     if (this.handlers.onDisconnect) {
       this.handlers.onDisconnect();
@@ -308,214 +303,16 @@ export class AlpacaWebSocketService {
     this.ws.send(messageStr);
   }
 
-  /**
-   * Handle WebSocket message
-   * @internal Currently unused - WebSocket implementation requires Durable Objects
-   */
-  private _handleMessage(data: string): void {
-    try {
-      const messages = data.split('\n').filter(m => m.trim());
-      
-      for (const messageStr of messages) {
-        const message = JSON.parse(messageStr) as AlpacaWebSocketMessage;
-        
-        switch (message.T) {
-          case 'success':
-            this.handleAuthSuccess(message);
-            break;
-          case 'error':
-            this.handleError(message);
-            break;
-          case 't':
-            this.handleTrades(message.trades || []);
-            break;
-          case 'q':
-            this.handleQuotes(message.quotes || []);
-            break;
-          case 'b':
-            this.handleBars(message.bars || []);
-            break;
-          case 'd':
-            this.handleDailyBars(message.dailyBars || []);
-            break;
-          case 's':
-            this.handleStatuses(message.statuses || []);
-            break;
-          case 'l':
-            this.handleLulds(message.lulds || []);
-            break;
-          default:
-            this.logger.debug('Unknown message type', { type: message.T });
-        }
-      }
-    } catch (error) {
-      this.logger.error('Failed to parse WebSocket message', {
-        error: (error as Error).message,
-        data
-      });
-    }
-  }
 
-  /**
-   * Handle authentication success
-   */
-  private handleAuthSuccess(_message: AlpacaWebSocketMessage): void {
-    this.logger.info('WebSocket authenticated successfully');
-    this.state = ConnectionState.AUTHENTICATED;
-    this.reconnectAttempts = 0;
 
-    if (this.handlers.onAuthenticated) {
-      this.handlers.onAuthenticated();
-    }
 
-    // Re-subscribe to previous subscriptions
-    if (Object.keys(this.subscriptions).length > 0) {
-      this.subscribe(this.subscriptions).catch(error => {
-        this.logger.error('Failed to re-subscribe', {
-          error: (error as Error).message
-        });
-      });
-    }
 
-    // Start ping interval
-    this.startPingInterval();
-  }
 
-  /**
-   * Handle error message
-   */
-  private handleError(message: AlpacaWebSocketMessage): void {
-    const error = new AppError(
-      'WEBSOCKET_ERROR',
-      message.msg || 'Unknown WebSocket error',
-      500,
-      { code: message.code }
-    );
 
-    this.logger.error('WebSocket error received', {
-      message: message.msg,
-      code: message.code
-    });
 
-    if (this.handlers.onError) {
-      this.handlers.onError(error);
-    }
-  }
 
-  /**
-   * Handle trade messages
-   */
-  private handleTrades(trades: unknown[]): void {
-    if (!this.handlers.onTrade) return;
-    
-    for (const trade of trades) {
-      this.handlers.onTrade(trade as TradeData);
-    }
-  }
 
-  /**
-   * Handle quote messages
-   */
-  private handleQuotes(quotes: unknown[]): void {
-    if (!this.handlers.onQuote) return;
-    
-    for (const quote of quotes) {
-      this.handlers.onQuote(quote as QuoteData);
-    }
-  }
 
-  /**
-   * Handle bar messages
-   */
-  private handleBars(bars: unknown[]): void {
-    if (!this.handlers.onBar) return;
-    
-    for (const bar of bars) {
-      this.handlers.onBar(bar as BarData);
-    }
-  }
-
-  /**
-   * Handle daily bar messages
-   */
-  private handleDailyBars(dailyBars: any[]): void {
-    if (!this.handlers.onDailyBar) return;
-    
-    for (const dailyBar of dailyBars) {
-      this.handlers.onDailyBar(dailyBar);
-    }
-  }
-
-  /**
-   * Handle status messages
-   */
-  private handleStatuses(statuses: unknown[]): void {
-    if (!this.handlers.onStatus) return;
-    
-    for (const status of statuses) {
-      this.handlers.onStatus(status as StatusData);
-    }
-  }
-
-  /**
-   * Handle LULD messages
-   */
-  private handleLulds(lulds: unknown[]): void {
-    if (!this.handlers.onLuld) return;
-    
-    for (const luld of lulds) {
-      this.handlers.onLuld(luld as LuldData);
-    }
-  }
-
-  /**
-   * Start ping interval
-   */
-  private startPingInterval(): void {
-    if (this.pingInterval !== null) {
-      clearInterval(this.pingInterval);
-    }
-
-    // Send ping every 30 seconds
-    this.pingInterval = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.sendMessage({ action: 'ping' });
-      }
-    }, 30000) as unknown as number;
-  }
-
-  /**
-   * Handle reconnection
-   */
-  private async _handleReconnect(): Promise<void> {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.logger.error('Max reconnection attempts reached');
-      this.state = ConnectionState.ERROR;
-      return;
-    }
-
-    this.reconnectAttempts++;
-    const delay = Math.min(
-      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
-      this.maxReconnectDelay
-    );
-
-    this.logger.info('Attempting to reconnect', {
-      attempt: this.reconnectAttempts,
-      delay
-    });
-
-    await sleep(delay);
-
-    try {
-      await this.connect(this.handlers);
-    } catch (error) {
-      this.logger.error('Reconnection failed', {
-        error: (error as Error).message
-      });
-      await this._handleReconnect();
-    }
-  }
 
   /**
    * Get connection state

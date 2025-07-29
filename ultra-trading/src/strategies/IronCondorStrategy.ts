@@ -6,7 +6,6 @@
  */
 
 import { TradingStrategy, Signal, MarketData, ValidationResult, Account } from '@/types/strategy';
-import { OrderType, TimeInForce } from '@/types/trading';
 import { OptionContract, OptionQuote } from '@/types/options';
 import { AlpacaService } from '@/services/alpaca/trading-client';
 import { MarketDataService } from '@/services/market-data';
@@ -200,7 +199,7 @@ export class IronCondorStrategy extends TradingStrategy {
     ]);
 
     // Select best legs based on criteria
-    const selectedLegs = await this.selectOptimalLegs(putChain, callChain, underlyingPrice);
+    const selectedLegs = await this.selectOptimalLegs(putChain, callChain);
     
     if (!this.validateLegs(selectedLegs)) {
       return [];
@@ -230,7 +229,7 @@ export class IronCondorStrategy extends TradingStrategy {
     const maxStrike = underlyingPrice * (1 + this.config.strikeRange);
 
     const contracts = await this.alpaca.getOptionContracts('system', {
-      underlyingSymbol: this.config.underlyingSymbol,
+      underlyingSymbols: this.config.underlyingSymbol,
       optionType,
       minStrike,
       maxStrike,
@@ -494,9 +493,12 @@ export class IronCondorStrategy extends TradingStrategy {
     }
 
     // Exit if expiration is near (7 days)
-    const daysToExpiry = this.calculateDaysToExpiry(
-      this.currentPosition.shortPut?.expirationDate || ''
-    );
+    const expirationDate = this.currentPosition?.shortPut?.expirationDate;
+    if (!expirationDate) {
+      return signals;
+    }
+    
+    const daysToExpiry = this.calculateDaysToExpiry(expirationDate);
     
     if (daysToExpiry <= 7) {
       signals.push(...this.generateExitSignals('Approaching expiration'));

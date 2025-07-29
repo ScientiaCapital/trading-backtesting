@@ -9,12 +9,12 @@ import type { AlpacaBar } from '../services/alpaca/AlpacaMarketData';
  * OHLCV data format for fastquant
  */
 export interface OHLCVData {
-  date: string[];
-  open: number[];
-  high: number[];
-  low: number[];
-  close: number[];
-  volume: number[];
+  date: (string | undefined)[];
+  open: (number | undefined)[];
+  high: (number | undefined)[];
+  low: (number | undefined)[];
+  close: (number | undefined)[];
+  volume: (number | undefined)[];
 }
 
 /**
@@ -108,6 +108,7 @@ export interface BacktestMetrics {
   worstTrade: number;
   avgHoldingPeriod: number;
   finalValue: number;
+  volatility?: number;
 }
 
 /**

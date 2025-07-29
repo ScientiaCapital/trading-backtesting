@@ -29,7 +29,7 @@ export class RealtimeService {
   private async ensureInitialized(): Promise<void> {
     if (!this.realtimeStub) {
       const id = this.env.REALTIME_UPDATES.idFromName('global');
-      this.realtimeStub = this.env.REALTIME_UPDATES.get(id);
+      this.realtimeStub = this.env.REALTIME_UPDATES.get(id) as any;
     }
   }
 
@@ -247,7 +247,7 @@ export class RealtimeService {
       
       return { error: 'Failed to get status' };
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 }

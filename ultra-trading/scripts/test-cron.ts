@@ -16,7 +16,7 @@ const mockEnv: CloudflareBindings = {
       }
       return null;
     },
-    put: async (key: string, value: string, options?: any) => {
+    put: async (key: string, value: string, _options?: any) => {
       console.log(`KV PUT: ${key} = ${value}`);
       return Promise.resolve();
     },
@@ -30,7 +30,7 @@ const mockEnv: CloudflareBindings = {
   AI: {} as any,
   AGENT_COORDINATOR: {
     idFromName: (name: string) => ({ toString: () => `mock-id-${name}` } as any),
-    get: (id: any) => ({
+    get: (_id: any) => ({
       fetch: async (request: Request) => {
         console.log(`Durable Object fetch: ${request.url}`);
         return new Response(JSON.stringify({ status: 'ok' }));
@@ -39,6 +39,8 @@ const mockEnv: CloudflareBindings = {
   } as any,
   TRADING_SESSION: {} as any,
   REALTIME_UPDATES: {} as any,
+  R2: {} as any,
+  ASSETS: {} as any,
   ALPACA_KEY_ID: 'mock-key',
   ALPACA_SECRET_KEY: 'mock-secret',
   ANTHROPIC_API_KEY: 'mock-anthropic',
@@ -49,16 +51,17 @@ const mockEnv: CloudflareBindings = {
 };
 
 const mockContext: ExecutionContext = {
-  waitUntil: (promise: Promise<any>) => {
+  waitUntil: (_promise: Promise<any>) => {
     console.log('waitUntil called');
   },
   passThroughOnException: () => {
     console.log('passThroughOnException called');
-  }
+  },
+  props: {} as any
 };
 
 // Test different cron patterns
-async function testCronHandlers() {
+async function testCronHandlers(): Promise<void> {
   console.log('🧪 Testing Cron Handlers\n');
 
   // Test 1: Market Open (9:30 AM)

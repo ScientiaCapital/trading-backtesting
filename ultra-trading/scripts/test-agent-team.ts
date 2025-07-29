@@ -3,6 +3,15 @@
  * Simulates market scenarios to test agent coordination
  */
 
+import type { 
+  D1Database, 
+  KVNamespace, 
+  R2Bucket, 
+  Ai,
+  DurableObjectNamespace,
+  Fetcher,
+  Request as WorkerRequest
+} from '@cloudflare/workers-types';
 import { CloudflareBindings } from '../src/types';
 import { AgentType, MessageType, MessagePriority } from '../src/types/agents';
 
@@ -64,12 +73,14 @@ const mockPositions = [
 // Test environment setup
 const testEnv: CloudflareBindings = {
   CACHE: createMockKV(),
-  DB: {} as any,
-  DATA_BUCKET: {} as any,
+  DB: {} as D1Database,
+  DATA_BUCKET: {} as R2Bucket,
+  R2: {} as R2Bucket,
   AI: createMockAI(),
   AGENT_COORDINATOR: createMockDurableObject('AgentCoordinator'),
   TRADING_SESSION: createMockDurableObject('TradingSession'),
   REALTIME_UPDATES: createMockDurableObject('RealtimeUpdates'),
+  ASSETS: {} as Fetcher,
   ALPACA_KEY_ID: 'test-key',
   ALPACA_SECRET_KEY: 'test-secret',
   ANTHROPIC_API_KEY: 'test-anthropic',
@@ -80,7 +91,7 @@ const testEnv: CloudflareBindings = {
 };
 
 // Mock KV implementation
-function createMockKV() {
+function createMockKV(): KVNamespace {
   const storage = new Map<string, any>();
   return {
     get: async (key: string, type?: string) => {
@@ -95,12 +106,14 @@ function createMockKV() {
     delete: async (key: string) => {
       console.log(`🗑️ KV DELETE: ${key}`);
       storage.delete(key);
-    }
-  };
+    },
+    list: async () => ({ keys: [], list_complete: false, cursor: undefined }),
+    getWithMetadata: async (key: string) => ({ value: storage.get(key), metadata: null })
+  } as unknown as KVNamespace;
 }
 
 // Mock AI implementation
-function createMockAI() {
+function createMockAI(): Ai {
   return {
     run: async (model: string, params: any) => {
       console.log(`🤖 AI Model: ${model}`);
@@ -139,16 +152,19 @@ function createMockAI() {
       
       return { response: JSON.stringify({ general: 'AI response simulated' }) };
     }
-  };
+  } as Ai;
 }
 
 // Mock Durable Object implementation
-function createMockDurableObject(className: string) {
+function createMockDurableObject(className: string): DurableObjectNamespace {
   return {
     idFromName: (name: string) => ({
       toString: () => `mock-id-${className}-${name}`
     }),
-    get: (id: any) => ({
+    newUniqueId: () => ({ toString: () => `unique-${Date.now()}` }),
+    idFromString: (id: string) => ({ toString: () => id }),
+    jurisdiction: () => 'us',
+    get: (_id: any) => ({
       fetch: async (request: Request) => {
         const url = new URL(request.url);
         const path = url.pathname;
@@ -161,12 +177,12 @@ function createMockDurableObject(className: string) {
         return new Response(JSON.stringify({ status: 'ok' }));
       }
     })
-  };
+  } as unknown as DurableObjectNamespace;
 }
 
 // Handle coordinator requests
-async function handleCoordinatorRequest(path: string, request: Request) {
-  const body = await request.json().catch(() => ({}));
+async function handleCoordinatorRequest(path: string, request: Request): Promise<Response> {
+  const body: any = await request.json().catch(() => ({}));
   
   switch (path) {
     case '/status':
@@ -207,7 +223,7 @@ async function handleCoordinatorRequest(path: string, request: Request) {
 }
 
 // Test scenarios
-async function runTests() {
+async function runTests(): Promise<void> {
   console.log('🚀 ULTRA Trading - AI Agent Team Test Suite\n');
   
   // Test 1: Agent Initialization
@@ -234,7 +250,7 @@ async function runTests() {
 }
 
 // Test 1: Agent Initialization
-async function testAgentInitialization() {
+async function testAgentInitialization(): Promise<void> {
   const coordinator = testEnv.AGENT_COORDINATOR.get(
     testEnv.AGENT_COORDINATOR.idFromName('test')
   );
@@ -242,16 +258,16 @@ async function testAgentInitialization() {
   const response = await coordinator.fetch(
     new Request('https://coordinator/status', {
       method: 'GET'
-    })
+    }) as unknown as WorkerRequest
   );
   
-  const status = await response.json();
+  const status = await response.json() as { agents: Array<{ status: string }> };
   console.log('✓ Agents initialized:', status.agents.length);
-  console.log('✓ All agents active:', status.agents.every((a: any) => a.status === 'active'));
+  console.log('✓ All agents active:', status.agents.every((a) => a.status === 'active'));
 }
 
 // Test 2: Market Analysis
-async function testMarketAnalysis() {
+async function testMarketAnalysis(): Promise<void> {
   const coordinator = testEnv.AGENT_COORDINATOR.get(
     testEnv.AGENT_COORDINATOR.idFromName('test')
   );
@@ -267,11 +283,11 @@ async function testMarketAnalysis() {
     priority: MessagePriority.HIGH
   };
   
-  const response = await coordinator.fetch(
+  await coordinator.fetch(
     new Request('https://coordinator/message', {
       method: 'POST',
       body: JSON.stringify(marketMessage)
-    })
+    }) as unknown as WorkerRequest
   );
   
   console.log('✓ Market update broadcasted');
@@ -280,11 +296,11 @@ async function testMarketAnalysis() {
   const aiResponse = await testEnv.AI.run('@cf/meta/llama-3.1-8b-instruct', {
     prompt: 'Analyze market data for trading opportunities'
   });
-  console.log('✓ AI analysis received:', JSON.parse(aiResponse.response).sentiment);
+  console.log('✓ AI analysis received:', JSON.parse(aiResponse.response || '{}').sentiment);
 }
 
 // Test 3: Risk Assessment
-async function testRiskAssessment() {
+async function testRiskAssessment(): Promise<void> {
   const riskMessage = {
     id: `risk-${Date.now()}`,
     from: AgentType.MARKET_ANALYST,
@@ -306,20 +322,20 @@ async function testRiskAssessment() {
     new Request('https://coordinator/message', {
       method: 'POST',
       body: JSON.stringify(riskMessage)
-    })
+    }) as unknown as WorkerRequest
   );
   
   // Simulate risk AI response
   const riskAI = await testEnv.AI.run('@cf/meta/llama-3.1-8b-instruct', {
     prompt: 'Perform risk assessment on current positions'
   });
-  const riskAnalysis = JSON.parse(riskAI.response);
+  const riskAnalysis = JSON.parse(riskAI.response || '{}');
   console.log('✓ Risk score:', riskAnalysis.risk_score);
   console.log('✓ Warnings:', riskAnalysis.warnings);
 }
 
 // Test 4: Strategy Optimization
-async function testStrategyOptimization() {
+async function testStrategyOptimization(): Promise<void> {
   const strategyAI = await testEnv.AI.run('@cf/qwen/qwen2.5-coder-32b-instruct', {
     prompt: 'Optimize trading strategy based on market conditions'
   });
@@ -331,7 +347,7 @@ async function testStrategyOptimization() {
 }
 
 // Test 5: Full Trading Decision Flow
-async function testTradingDecisionFlow() {
+async function testTradingDecisionFlow(): Promise<void> {
   const coordinator = testEnv.AGENT_COORDINATOR.get(
     testEnv.AGENT_COORDINATOR.idFromName('test')
   );
@@ -347,16 +363,21 @@ async function testTradingDecisionFlow() {
           enabledStrategies: ['iron_condor', 'wheel', 'gamma_scalping']
         }
       })
-    })
+    }) as unknown as WorkerRequest
   );
   
-  const decision = await decisionResponse.json();
+  const decision = await decisionResponse.json() as {
+    action: string;
+    strategy: string;
+    confidence: number;
+    consensus: Record<string, number>;
+  };
   console.log('✓ Decision:', decision.action);
   console.log('✓ Strategy:', decision.strategy);
   console.log('✓ Confidence:', (decision.confidence * 100).toFixed(0) + '%');
   console.log('✓ Agent consensus:');
   Object.entries(decision.consensus).forEach(([agent, score]) => {
-    console.log(`  - ${agent}: ${((score as number) * 100).toFixed(0)}%`);
+    console.log(`  - ${agent}: ${(score * 100).toFixed(0)}%`);
   });
 }
 

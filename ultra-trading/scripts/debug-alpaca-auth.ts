@@ -10,8 +10,8 @@ import https from 'https';
 // Load environment variables
 dotenv.config({ path: '../../.env' });
 
-const API_KEY = process.env.ALPACA_API_KEY || 'PKYN9OAQHP1IR05GGAGL';
-const API_SECRET = process.env.ALPACA_API_SECRET || 'tfezhnS1NvEtu8eT6BkW3fLd1wKIi0Ygc5HILoBl';
+const API_KEY = process.env['ALPACA_API_KEY'] || 'PKYN9OAQHP1IR05GGAGL';
+const API_SECRET = process.env['ALPACA_API_SECRET'] || 'tfezhnS1NvEtu8eT6BkW3fLd1wKIi0Ygc5HILoBl';
 
 console.log('🔍 Alpaca Authentication Debugger\n');
 console.log('📋 Credentials:');

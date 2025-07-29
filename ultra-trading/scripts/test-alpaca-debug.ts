@@ -8,11 +8,11 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config({ path: '../../.env' });
 
-async function testAlpacaDirectly() {
+async function testAlpacaDirectly(): Promise<void> {
   console.log('🔍 Testing Alpaca API with direct fetch...\n');
   
-  const apiKey = process.env.ALPACA_API_KEY || 'PKULZQJRNA5SFQU6ES23';
-  const apiSecret = process.env.ALPACA_API_SECRET || 'ZEeHb6MV6gSWxfwQYJoqzY07RnEcJRlO3KqkFHFE';
+  const apiKey = 'PKULZQJRNA5SFQU6ES23';
+  const apiSecret = 'ZEeHb6MV6gSWxfwQYJoqzY07RnEcJRlO3KqkFHFE';
   const url = 'https://paper-api.alpaca.markets/v2/account';
   
   console.log('📋 Request Details:');
@@ -40,8 +40,8 @@ async function testAlpacaDirectly() {
     } else {
       const data = await response1.json();
       console.log('  ✅ Success! Account data received');
-      console.log(`  - Account ID: ${data.id}`);
-      console.log(`  - Buying Power: $${parseFloat(data.buying_power).toLocaleString()}`);
+      console.log(`  - Account ID: ${(data as any).id}`);
+      console.log(`  - Buying Power: $${parseFloat((data as any).buying_power).toLocaleString()}`);
     }
     console.log('');
     
