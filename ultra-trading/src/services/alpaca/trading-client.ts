@@ -106,7 +106,7 @@ export class AlpacaService {
     const creds = await this.getCredentials(tenantId);
     
     // Build URL
-    const url = `${this.config.baseUrl}/${this.config.apiVersion}${path}`;
+    const url = `${this.config.baseUrl ?? ''}/${this.config.apiVersion ?? ''}${path}`;
     
     // Add authentication headers
     const headers = {

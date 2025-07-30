@@ -47,7 +47,14 @@ export class BacktestDataConverter implements DataConverter {
    */
   ohlcvToDataFrame(data: OHLCVData): any {
     // Create a structure that can be easily converted to pandas DataFrame
-    const rows = [];
+    const rows: {
+      date: string | undefined;
+      open: number | undefined;
+      high: number | undefined;
+      low: number | undefined;
+      close: number | undefined;
+      volume: number | undefined;
+    }[] = [];
     
     for (let i = 0; i < data.date.length; i++) {
       rows.push({
@@ -132,15 +139,15 @@ export class BacktestDataConverter implements DataConverter {
       const date = data.date[i];
       
       if (high !== undefined && low !== undefined && high < low) {
-        errors.push(`Invalid OHLC at ${date}: high < low`);
+        errors.push(`Invalid OHLC at ${date ?? 'unknown'}: high < low`);
       }
       
       if ((open !== undefined && open <= 0) || (close !== undefined && close <= 0)) {
-        errors.push(`Invalid price at ${date}: price <= 0`);
+        errors.push(`Invalid price at ${date ?? 'unknown'}: price <= 0`);
       }
 
       if (volume !== undefined && volume < 0) {
-        errors.push(`Invalid volume at ${date}: volume < 0`);
+        errors.push(`Invalid volume at ${date ?? 'unknown'}: volume < 0`);
       }
     }
 

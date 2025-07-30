@@ -482,7 +482,7 @@ export class AfterHoursResearcher extends AIAgent {
   }
 
   private async storeAnalysisResults(analysis: AfterHoursAnalysis): Promise<void> {
-    const key = `after-hours-analysis:${new Date().toISOString().split('T')[0]}`;
+    const key = `after-hours-analysis:${new Date().toISOString().split('T')[0] ?? 'unknown'}`;
     
     await this.env.CACHE.put(key, JSON.stringify(analysis), {
       expirationTtl: 86400 * 7 // Keep for 7 days

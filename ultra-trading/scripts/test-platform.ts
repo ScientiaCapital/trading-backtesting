@@ -3,6 +3,8 @@
  * Tests all major functionality
  */
 
+import type { ApiResponse } from '../src/types/index';
+
 const PLATFORM_API_BASE = 'http://localhost:8787/api/v1';
 
 // Color codes for console output
@@ -41,7 +43,7 @@ async function testEndpoint(name: string, method: string, endpoint: string, body
     }
     
     const response = await fetch(`${PLATFORM_API_BASE}${endpoint}`, options);
-    const data = await response.json();
+    const data = await response.json() as ApiResponse<any>;
     
     if (data.success) {
       log(`✓ ${name} - SUCCESS`, 'success');

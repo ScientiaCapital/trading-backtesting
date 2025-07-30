@@ -422,19 +422,19 @@ agentRoutes.post('/test/fast-decision', async (c) => {
         }) as any
       );
       
-      const decision = await response.json();
+      const decision = await response.json() as { action: string; confidence: number };
       const endTime = Date.now();
       
-      results.push({
+      (results as any[]).push({
         iteration: i + 1,
         processingTime: endTime - startTime,
-        decision: (decision as any).action,
-        confidence: (decision as any).confidence
+        decision: decision.action,
+        confidence: decision.confidence
       });
     }
     
     // Calculate statistics
-    const times = results.map(r => r.processingTime);
+    const times = results.map(r => (r as any).processingTime);
     const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);

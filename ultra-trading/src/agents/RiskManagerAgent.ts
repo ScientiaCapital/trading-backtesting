@@ -315,7 +315,7 @@ export class RiskManagerAgent extends AIAgent implements IRiskManagerAgent {
       Proposed Trade:
       - Symbol: ${proposedTrade.symbol}
       - Action: ${proposedTrade.action}
-      - Quantity: ${proposedTrade.quantity}
+      - Quantity: ${proposedTrade.quantity ?? 0}
       - Price: ${proposedTrade.price || proposedTrade.limitPrice || 'N/A'}
       ` : 'No proposed trade'}
       

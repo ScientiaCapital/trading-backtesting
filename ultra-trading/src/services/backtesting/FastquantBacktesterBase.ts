@@ -53,7 +53,7 @@ export abstract class FastquantBacktesterBase {
       
       if (cached) {
         console.log(`[${this.requestId}] Using cached data for ${symbol}`);
-        return cached;
+        return cached as OHLCVData;
       }
 
       // Fetch from Alpaca
@@ -132,15 +132,15 @@ export abstract class FastquantBacktesterBase {
 
       const result = await response.json();
       
-      if (!result.success) {
+      if (!(result as any).success) {
         throw new AppError(
           'BACKTEST_FAILED',
-          result.error || 'Backtest execution failed',
+          (result as any).error || 'Backtest execution failed',
           500
         );
       }
 
-      return result;
+      return result as BacktestResponse;
     } catch (error) {
       if (error instanceof AppError) throw error;
       
@@ -194,7 +194,7 @@ export abstract class FastquantBacktesterBase {
   async getResult(backtestId: string): Promise<BacktestResult | null> {
     // Check cache first
     const cached = await this.env.CACHE.get(`backtest:result:${backtestId}`, 'json');
-    if (cached) return cached;
+    if (cached) return cached as BacktestResult;
 
     // Get from R2
     const key = `backtests/${backtestId}.json`;
@@ -209,7 +209,7 @@ export abstract class FastquantBacktesterBase {
       expirationTtl: 3600
     });
 
-    return result;
+    return result as BacktestResult;
   }
 
   /**
@@ -273,7 +273,7 @@ export abstract class FastquantBacktesterBase {
     for (const object of listed.objects) {
       const result = await this.env.R2.get(object.key);
       if (result) {
-        const backtest = await result.json();
+        const backtest = await result.json() as BacktestResult;
         results.push(backtest);
       }
     }

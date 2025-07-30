@@ -89,7 +89,7 @@ export class ContextualEmbeddingsService {
     const dayOfWeek = timestamp.getDay();
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
-    let timeContext = `Time: ${dayNames[dayOfWeek]} ${timestamp.toLocaleString()}. `;
+    let timeContext = `Time: ${dayNames[dayOfWeek] ?? 'Unknown'} ${timestamp.toLocaleString()}. `;
     
     // Market session context
     if (hour === 9 && minute < 30) {
@@ -215,7 +215,7 @@ export class ContextualEmbeddingsService {
     else context += 'Neutral sentiment. ';
 
     if (sources?.length > 0) {
-      context += `Based on ${sources.length} sources. `;
+      context += `Based on ${Number(sources.length)} sources. `;
     }
 
     return context;

@@ -26,6 +26,8 @@ interface ScheduledBacktest {
   enabled: boolean;
 }
 
+// type BacktestSchedule = ScheduledBacktest;
+
 export class BacktestScheduler {
   private state: DurableObjectState;
   private env: CloudflareBindings;
@@ -37,7 +39,7 @@ export class BacktestScheduler {
     this.env = env;
     
     // Initialize alarm for next scheduled run
-    this.state.blockConcurrencyWhile(async () => {
+    void this.state.blockConcurrencyWhile(async () => {
       await this.loadSchedules();
       await this.scheduleNextRun();
     });
@@ -117,7 +119,7 @@ export class BacktestScheduler {
   }
 
   private async createSchedule(request: Request): Promise<Response> {
-    const data = await request.json();
+    const data = await request.json() as any;
     
     // Generate ID if not provided
     if (!data.id) {
@@ -129,7 +131,7 @@ export class BacktestScheduler {
     data.enabled = data.enabled !== false; // Default to enabled
     
     // Save schedule
-    this.schedules.set(data.id, data);
+    this.schedules.set(data.id, data as ScheduledBacktest);
     await this.saveSchedules();
     
     // Update alarm if this is the next schedule to run
@@ -141,7 +143,7 @@ export class BacktestScheduler {
   }
 
   private async updateSchedule(request: Request): Promise<Response> {
-    const { id, ...updates } = await request.json();
+    const { id, ...updates } = await request.json() as { id: string; [key: string]: any };
     
     const schedule = this.schedules.get(id);
     if (!schedule) {
@@ -152,8 +154,8 @@ export class BacktestScheduler {
     Object.assign(schedule, updates);
     
     // Recalculate next run if schedule changed
-    if (updates.schedule) {
-      schedule.nextRun = this.calculateNextRun(schedule.schedule);
+    if (updates['schedule']) {
+      schedule.nextRun = this.calculateNextRun(schedule['schedule']);
     }
     
     await this.saveSchedules();
@@ -165,7 +167,7 @@ export class BacktestScheduler {
   }
 
   private async deleteSchedule(request: Request): Promise<Response> {
-    const { id } = await request.json();
+    const { id } = await request.json() as { id: string };
     
     if (!this.schedules.has(id)) {
       return new Response('Schedule not found', { status: 404 });
@@ -187,7 +189,7 @@ export class BacktestScheduler {
   }
 
   private async runBacktest(request: Request): Promise<Response> {
-    const { scheduleId, immediate } = await request.json();
+    const { scheduleId, immediate } = await request.json() as { scheduleId?: string; immediate?: boolean };
     
     if (scheduleId) {
       const schedule = this.schedules.get(scheduleId);
@@ -208,7 +210,7 @@ export class BacktestScheduler {
       for (const schedule of this.schedules.values()) {
         if (schedule.enabled) {
           const result = await this.executeScheduledBacktest(schedule);
-          results.push(result);
+          results.push(result as never);
         }
       }
       
@@ -313,7 +315,7 @@ export class BacktestScheduler {
         type: schedule.type,
         lastRun: schedule.lastRun,
         results
-      });
+      } as never);
     }
     
     return new Response(JSON.stringify(history), {

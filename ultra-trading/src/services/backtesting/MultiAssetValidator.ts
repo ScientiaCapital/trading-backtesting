@@ -221,7 +221,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
     performance: BacktestMetrics;
     recommendation: string;
   }[]> {
-    const results = [];
+    const results: any[] = [];
     
     // Test stock strategies
     for (const symbol of symbols.stocks) {
@@ -243,7 +243,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         assetClass: 'stock',
         performance: result.portfolioMetrics,
         recommendation: this.generateRecommendation('stock', result.portfolioMetrics)
-      });
+      } as any);
     }
     
     // Test crypto strategies (24/7 trading)
@@ -266,7 +266,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         assetClass: 'crypto',
         performance: result.portfolioMetrics,
         recommendation: this.generateRecommendation('crypto', result.portfolioMetrics)
-      });
+      } as any);
     }
     
     // Test options strategies (using proxies)
@@ -298,7 +298,7 @@ export class MultiAssetValidator extends FastquantBacktesterBase {
         assetClass: 'option',
         performance: result.portfolioMetrics,
         recommendation: this.generateRecommendation('option', result.portfolioMetrics)
-      });
+      } as any);
     }
     
     return results;

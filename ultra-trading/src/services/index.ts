@@ -171,8 +171,8 @@ export class MarketDataService {
       const cacheEntry = createCacheEntry(data, 60);
       await this.ctx.env.CACHE.put(cacheKey, JSON.stringify(cacheEntry));
 
-      logger.info('Price data fetched', { symbol, price: data.price });
-      return data;
+      logger.info('Price data fetched', { symbol, price: (data as any).price });
+      return data as MarketData;
 
     } catch (error) {
       logger.error('Failed to fetch market data', { symbol, error: (error as Error).message });
@@ -220,10 +220,10 @@ export class MarketDataService {
         symbol, 
         startDate, 
         endDate, 
-        recordCount: data.length 
+        recordCount: (data as any).length 
       });
       
-      return data;
+      return data as MarketData[];
 
     } catch (error) {
       logger.error('Failed to fetch historical data', { 
@@ -411,7 +411,7 @@ export class AIService {
       throw new AppError('CLAUDE_API_ERROR', 'Claude API request failed');
     }
 
-    const data = await response.json();
+    const data = await response.json() as { content: Array<{ text: string }> };
     return data.content[0]?.text ?? '';
   }
 
@@ -447,7 +447,7 @@ export class AIService {
       throw new AppError('GEMINI_API_ERROR', 'Gemini API request failed');
     }
 
-    const data = await response.json();
+    const data = await response.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
     return data.candidates[0]?.content.parts[0]?.text ?? '';
   }
 

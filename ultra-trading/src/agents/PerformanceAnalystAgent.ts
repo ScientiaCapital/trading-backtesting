@@ -223,7 +223,7 @@ export class PerformanceAnalystAgent extends AIAgent implements IPerformanceAgen
 🎯 Win Rate: ${winRate}%
 📉 Current Drawdown: ${(this.dailyMetrics.currentDrawdown * 100).toFixed(1)}%
 
-${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reason}` : '✅ Trading Active'}
+${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reason ?? 'Unknown reason'}` : '✅ Trading Active'}
     `;
     
     return report.trim();
@@ -342,7 +342,7 @@ ${this.dailyMetrics.shouldStop ? `⛔ TRADING STOPPED: ${this.dailyMetrics.reaso
    */
   private async saveDailyMetrics(): Promise<void> {
     // In production, save to KV or D1
-    const todayKey = `performance:${new Date().toISOString().split('T')[0]}`;
+    const todayKey = `performance:${new Date().toISOString().split('T')[0] ?? 'unknown'}`;
     
     this.logger.info('Saving daily metrics', {
       key: todayKey,

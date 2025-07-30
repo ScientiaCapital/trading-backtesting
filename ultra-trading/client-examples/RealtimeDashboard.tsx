@@ -390,7 +390,7 @@ export const RealtimeDashboard: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .realtime-dashboard {
           padding: 20px;
           background-color: #0a0a0a;

@@ -375,12 +375,12 @@ export class FastquantBacktester extends FastquantBacktesterBase {
     expectedReturn: number;
     confidence: number;
   }[]> {
-    const reports = [];
+    const reports: any[] = [];
 
     for (const symbol of symbols) {
       // Test multiple strategies
       const strategies = ['RSI', 'MACD', 'BBANDS'] as const;
-      let bestStrategy = null;
+      let bestStrategy: { symbol: string; strategy: 'RSI' | 'MACD' | 'BBANDS'; parameters: StrategyParameters; expectedReturn: number; confidence: number } | null = null;
       let bestReturn = -Infinity;
 
       for (const strategy of strategies) {
@@ -403,12 +403,12 @@ export class FastquantBacktester extends FastquantBacktesterBase {
       }
 
       if (bestStrategy) {
-        reports.push(bestStrategy);
+        reports.push(bestStrategy as any);
       }
     }
 
     // Sort by expected return
-    reports.sort((a, b) => b.expectedReturn - a.expectedReturn);
+    reports.sort((a: any, b: any) => b.expectedReturn - a.expectedReturn);
 
     return reports;
   }

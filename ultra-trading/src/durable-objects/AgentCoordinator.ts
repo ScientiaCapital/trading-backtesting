@@ -15,16 +15,17 @@ import {
   MessagePriority,
   MessageType,
   PerformanceStatus
-} from '@/types/agents';
-import { MarketAnalystAgent } from '@/agents/MarketAnalystAgent';
-import { StrategyOptimizerAgent } from '@/agents/StrategyOptimizerAgent';
-import { RiskManagerAgent } from '@/agents/RiskManagerAgent';
-import { PerformanceAnalystAgent } from '@/agents/PerformanceAnalystAgent';
-import { ExecutionAgent } from '@/agents/ExecutionAgent';
-// import { OptionsFlowAnalyst } from '@/agents/OptionsFlowAnalyst'; // Temporarily disabled
-// import { MarketHoursResearcher } from '@/agents/MarketHoursResearcher'; // Temporarily disabled
-import { CloudflareBindings } from '@/types';
-import { FastDecisionService } from '@/services/FastDecisionService';
+} from '../types/agents';
+import { isAgentMessage } from '../types/api-responses';
+import { MarketAnalystAgent } from '../agents/MarketAnalystAgent';
+import { StrategyOptimizerAgent } from '../agents/StrategyOptimizerAgent';
+import { RiskManagerAgent } from '../agents/RiskManagerAgent';
+import { PerformanceAnalystAgent } from '../agents/PerformanceAnalystAgent';
+import { ExecutionAgent } from '../agents/ExecutionAgent';
+// import { OptionsFlowAnalyst } from '../agents/OptionsFlowAnalyst'; // Temporarily disabled
+// import { MarketHoursResearcher } from '../agents/MarketHoursResearcher'; // Temporarily disabled
+import { CloudflareBindings } from '../types';
+import { FastDecisionService } from '../services/FastDecisionService';
 
 export class AgentCoordinator {
   private state: DurableObjectState;
@@ -179,6 +180,10 @@ export class AgentCoordinator {
   private async handleMessage(request: Request): Promise<Response> {
     const message = await request.json();
     
+    if (!isAgentMessage(message)) {
+      return new Response('Invalid message format', { status: 400 });
+    }
+    
     // Add to queue
     this.messageQueue.push(message);
     
@@ -229,7 +234,7 @@ export class AgentCoordinator {
    * Make a trading decision
    */
   private async makeDecision(request: Request): Promise<Response> {
-    const { context, useQuickDecision = true } = await request.json();
+    const { context, useQuickDecision = true } = await request.json() as { context: any; useQuickDecision?: boolean };
     
     const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     

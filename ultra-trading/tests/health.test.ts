@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import app from '../src/index';
 import type { ExecutionContext } from '@cloudflare/workers-types';
+import type { ApiResponse } from '../src/types/index';
 
 // Mock ExecutionContext for tests
 const mockContext = {
@@ -25,10 +26,10 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json();
+    const json = await res.json() as ApiResponse<{ name: string; status: string; version: string }>;
     expect(json.success).toBe(true);
-    expect(json.data.name).toBe('ULTRA Trading Platform');
-    expect(json.data.status).toBe('healthy');
+    expect(json.data?.name).toBe('ULTRA Trading Platform');
+    expect(json.data?.status).toBe('healthy');
   });
 
   it('should respond to ping endpoint', async () => {
@@ -41,9 +42,9 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json();
+    const json = await res.json() as ApiResponse<{ message: string }>;
     expect(json.success).toBe(true);
-    expect(json.data.message).toBe('pong');
+    expect(json.data?.message).toBe('pong');
   });
 
   it('should respond to status endpoint', async () => {
@@ -56,11 +57,11 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json();
+    const json = await res.json() as ApiResponse<{ service: string; version: string; features: any; limits: any }>;
     expect(json.success).toBe(true);
-    expect(json.data.service).toBe('ULTRA Trading Platform');
-    expect(json.data.features).toBeDefined();
-    expect(json.data.limits).toBeDefined();
+    expect(json.data?.service).toBe('ULTRA Trading Platform');
+    expect(json.data?.features).toBeDefined();
+    expect(json.data?.limits).toBeDefined();
   });
 
   it('should respond to docs endpoint', async () => {
@@ -73,10 +74,10 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json();
+    const json = await res.json() as ApiResponse<{ title: string; version: string; endpoints: any }>;
     expect(json.success).toBe(true);
-    expect(json.data.title).toBe('ULTRA Trading Platform API');
-    expect(json.data.endpoints).toBeDefined();
+    expect(json.data?.title).toBe('ULTRA Trading Platform API');
+    expect(json.data?.endpoints).toBeDefined();
   });
 
   it('should return 404 for unknown routes', async () => {
@@ -89,8 +90,8 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(404);
     
-    const json = await res.json();
+    const json = await res.json() as ApiResponse<any>;
     expect(json.success).toBe(false);
-    expect(json.error.code).toBe('NOT_FOUND');
+    expect(json.error?.code).toBe('NOT_FOUND');
   });
 });

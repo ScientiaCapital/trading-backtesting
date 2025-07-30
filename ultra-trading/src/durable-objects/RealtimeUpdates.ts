@@ -89,7 +89,7 @@ export class RealtimeUpdates {
     
     // Set up event handlers
     server.addEventListener('message', (event) => {
-      this.handleClientMessage(clientId, event.data as string);
+      void this.handleClientMessage(clientId, event.data as string);
     });
     
     server.addEventListener('close', () => {
@@ -252,7 +252,7 @@ export class RealtimeUpdates {
    */
   private async handleBroadcast(request: Request): Promise<Response> {
     try {
-      const message = await request.json();
+      const message = await request.json() as { channel: string; type: string; data: any; timestamp?: string };
       
       await this.broadcastToChannel(message.channel, {
         type: message.type,

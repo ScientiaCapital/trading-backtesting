@@ -503,7 +503,7 @@ tradingRoutes.get('/status', async (c) => {
     const clock = await alpaca.getClock();
     
     // Check if trading is enabled (from KV)
-    const tradingEnabled = await c.env.CACHE.get('trading:enabled', 'json');
+    const tradingEnabled = await c.env.CACHE.get('trading:enabled', 'json') as { enabled: boolean } | null;
     
     const status = {
       tradingEnabled: tradingEnabled?.enabled ?? false,

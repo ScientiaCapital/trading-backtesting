@@ -4,7 +4,7 @@
  */
 
 import { CloudflareBindings } from '@/types';
-import { TradingPipeline } from '@/services/TradingPipeline';
+import { TradingPipeline, PipelineStatus } from '@/services/TradingPipeline';
 import { AlpacaTradingService } from '@/services/alpaca/AlpacaTradingService';
 import { RealtimeService } from '@/services/RealtimeService';
 
@@ -263,13 +263,13 @@ export class CronHandler {
   private async handleMarketClose(): Promise<void> {
     console.log('Market close handler started');
 
-    let finalStatus = null;
+    let finalStatus: PipelineStatus | null = null;
 
     // Stop trading if still running
     if (this.pipeline) {
       finalStatus = this.pipeline.getStatus();
       
-      if (finalStatus.isRunning) {
+      if (finalStatus && finalStatus.isRunning) {
         await this.pipeline.stop('Market closed');
       }
     }
@@ -283,7 +283,7 @@ export class CronHandler {
     // Send daily report
     await this.sendNotification({
       type: 'DAILY_SUMMARY',
-      message: `Trading day complete: ${summary.result}`,
+      message: `Trading day complete: ${String(summary.result)}`,
       data: summary
     });
 
@@ -298,7 +298,7 @@ export class CronHandler {
    */
   private async isTradingEnabled(): Promise<boolean> {
     try {
-      const settings = await this.env.CACHE.get('trading:enabled', 'json');
+      const settings = await this.env.CACHE.get('trading:enabled', 'json') as { enabled: boolean } | null;
       return settings?.enabled ?? true; // Default to enabled
     } catch {
       return true;
@@ -337,7 +337,7 @@ export class CronHandler {
       summary.targetAchieved = status.dailyPnL >= 300;
       
       if (status.dailyPnL > 0) {
-        summary.result = `Profit: $${status.dailyPnL.toFixed(2)}`;
+        summary.result = `Profit: $${Number(status.dailyPnL).toFixed(2)}`;
       } else if (status.dailyPnL < 0) {
         summary.result = `Loss: $${Math.abs(status.dailyPnL).toFixed(2)}`;
       } else {
@@ -352,7 +352,7 @@ export class CronHandler {
    * Store daily results
    */
   private async storeDailyResults(summary: any): Promise<void> {
-    const key = `results:daily:${summary.date}`;
+    const key = `results:daily:${String(summary.date)}`;
     await this.env.CACHE.put(key, JSON.stringify(summary), {
       expirationTtl: 30 * 24 * 60 * 60 // Keep for 30 days
     });
@@ -365,7 +365,7 @@ export class CronHandler {
    * Update monthly aggregate
    */
   private async updateMonthlyAggregate(dailySummary: any): Promise<void> {
-    const monthKey = `results:monthly:${dailySummary.date.substring(0, 7)}`;
+    const monthKey = `results:monthly:${String(dailySummary.date).substring(0, 7)}`;
     
     const existing = await this.env.CACHE.get(monthKey, 'json') as any || {
       totalPnL: 0,

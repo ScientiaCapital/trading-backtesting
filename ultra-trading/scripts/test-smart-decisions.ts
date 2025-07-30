@@ -3,6 +3,8 @@
  * Validates decision quality improvements
  */
 
+import type { AgentDecision } from '../src/types/api-responses';
+
 const SMART_API_BASE = 'https://ultra-trading.tkipper.workers.dev/api/v1';
 
 // Sample market data scenarios
@@ -142,7 +144,7 @@ async function testDecision(scenario: any): Promise<void> {
       })
     });
     
-    const decision = await response.json();
+    const decision = await response.json() as AgentDecision;
     const elapsed = Date.now() - startTime;
     
     console.log(`⏱️  Response Time: ${elapsed}ms`);
@@ -150,10 +152,10 @@ async function testDecision(scenario: any): Promise<void> {
     console.log(`📊 Confidence: ${(decision.confidence * 100).toFixed(1)}%`);
     console.log(`💭 Reasoning: ${decision.reasoning}`);
     
-    if (decision.stopLoss) {
+    if ('stopLoss' in decision && decision.stopLoss) {
       console.log(`🛑 Stop Loss: $${decision.stopLoss.toFixed(2)}`);
     }
-    if (decision.takeProfit) {
+    if ('takeProfit' in decision && decision.takeProfit) {
       console.log(`🎯 Take Profit: $${decision.takeProfit.toFixed(2)}`);
     }
     
@@ -170,33 +172,33 @@ async function testDecision(scenario: any): Promise<void> {
   }
 }
 
-function validateDecision(scenario: any, decision: any) {
+function validateDecision(scenario: any, decision: AgentDecision) {
   console.log(`\n✅ Validation:`);
   
   const market = scenario.marketData[0];
-  const issues = [];
+  const issues: string[] = [];
   
   // Check overbought/oversold logic
-  if (market.rsi > 80 && decision.action === 'ENTER_POSITION') {
+  if (market.rsi > 80 && decision.action === 'buy') {
     issues.push('⚠️  Buying in overbought conditions');
   }
-  if (market.rsi < 20 && decision.action === 'EXIT_POSITION') {
+  if (market.rsi < 20 && decision.action === 'sell') {
     issues.push('⚠️  Selling in oversold conditions');
   }
   
   // Check spread
   const spread = (market.ask - market.bid) / market.price;
-  if (spread > 0.002 && decision.action !== 'WAIT') {
+  if (spread > 0.002 && decision.action !== 'hold') {
     issues.push('⚠️  Trading with wide spread');
   }
   
   // Check position limits
-  if (scenario.positions.length >= 5 && decision.action === 'ENTER_POSITION') {
+  if (scenario.positions.length >= 5 && decision.action === 'buy') {
     issues.push('⚠️  Exceeding position limits');
   }
   
   // Check daily P&L limits
-  if (scenario.dailyPnL <= -300 && decision.action !== 'WAIT') {
+  if (scenario.dailyPnL <= -300 && decision.action !== 'hold') {
     issues.push('⚠️  Trading after daily loss limit');
   }
   

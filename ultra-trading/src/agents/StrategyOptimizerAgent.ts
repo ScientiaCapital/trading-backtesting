@@ -111,7 +111,7 @@ export class StrategyOptimizerAgent extends AIAgent implements IStrategyOptimize
           throw new Error(`Claude API error: ${apiResponse.status}`);
         }
 
-        const data = await apiResponse.json();
+        const data = await apiResponse.json() as { content: Array<{ text: string }> };
         const firstContent = data.content[0];
         if (!firstContent) {
           throw new Error('No content received from Claude API');

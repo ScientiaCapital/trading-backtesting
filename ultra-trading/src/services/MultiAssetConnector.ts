@@ -98,7 +98,7 @@ class AlpacaCryptoConnector implements Connector {
           x: string;   // exchange
         };
       }
-      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`);
+      const quote = await this.alpacaClient.dataRequest(`/v1beta3/crypto/${symbol}/quotes/latest`) as any;
       const q = quote.quote;
       
       return {
@@ -138,7 +138,7 @@ class AlpacaCryptoConnector implements Connector {
         }
       });
       
-      const bars = response.bars || [];
+      const bars = (response as any).bars || [];
       return bars.map((bar) => ({
         symbol,
         assetClass: AssetClass.CRYPTO,
