@@ -2,17 +2,13 @@
   "name": "ultra-trading",
   "type": "module",
   "version": "1.0.0",
-  "description": "ULTRA Trading Platform - Next-gen trading with AI on Cloudflare Edge",
+  "description": "ULTRA Trading Platform - Next-gen trading with AI",
   "scripts": {
-    "dev": "wrangler dev --local --persist-to .wrangler/state",
-    "deploy": "wrangler deploy --minify",
-    "deploy:staging": "wrangler deploy --env staging --minify",
-    "deploy:production": "wrangler deploy --env production --minify",
-    "predeploy": "npm run validate:deployment",
-    "predeploy:staging": "npm run validate:deployment",
-    "predeploy:production": "npm run validate:deployment && npm run validate:production",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "build": "tsc --noEmit",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "build:check": "tsc --noEmit",
+    "deploy": "npm run build && npm run start",
     "lint": "NODE_OPTIONS=--max-semi-space-size=256 eslint . --fix --max-warnings=0",
     "lint:check": "NODE_OPTIONS=--max-semi-space-size=256 eslint . --max-warnings=50",
     "lint:strict": "NODE_OPTIONS=--max-semi-space-size=256 eslint . --max-warnings=0",
@@ -24,20 +20,11 @@
     "test:alpaca": "tsx scripts/test-alpaca.ts",
     "validate": "npm run type-check && npm run lint:check && npm run test",
     "validate:build": "tsx scripts/validate-build.ts",
-    "validate:deployment": "tsx scripts/validate-deployment.ts",
-    "validate:production": "tsx scripts/validate-production.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "setup:cloudflare": "tsx scripts/setup-cloudflare.ts",
-    "setup:secrets": "tsx scripts/setup-secrets.ts",
-    "setup:secrets:staging": "tsx scripts/setup-secrets.ts staging",
-    "setup:secrets:production": "tsx scripts/setup-secrets.ts production",
     "db:init": "tsx scripts/db-init.ts",
     "db:migrate": "tsx scripts/db-init.ts",
-    "market:prep": "tsx scripts/market-prep.ts",
-    "logs:staging": "wrangler tail --env staging",
-    "logs:production": "wrangler tail --env production",
-    "logs:local": "wrangler tail --local"
+    "market:prep": "tsx scripts/market-prep.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.29.0",
@@ -50,7 +37,6 @@
   },
   "devDependencies": {
     "@alpacahq/alpaca-trade-api": "^3.1.3",
-    "@cloudflare/workers-types": "^4.20241230.0",
     "@eslint/js": "^9.17.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
@@ -66,8 +52,7 @@
     "tsx": "^4.20.3",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.38.0",
-    "vitest": "^2.1.8",
-    "wrangler": "^4.26.0"
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=18.0.0"

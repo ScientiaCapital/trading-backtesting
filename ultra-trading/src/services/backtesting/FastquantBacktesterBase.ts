@@ -273,7 +273,7 @@ export abstract class FastquantBacktesterBase {
     for (const object of listed.objects) {
       const result = await this.env.R2.get(object.key);
       if (result) {
-        const backtest = await result.json() as BacktestResult;
+        const backtest = await result.json();
         results.push(backtest);
       }
     }

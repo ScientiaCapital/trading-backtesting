@@ -269,7 +269,7 @@ export class TradingPipeline {
       const response = await this.sendToCoordinator('/decision', { context });
       
       if (response.ok) {
-        const decision = await response.json() as TradingDecision;
+        const decision = await response.json();
         
         console.log('Trading decision received', {
           id: decision.id,

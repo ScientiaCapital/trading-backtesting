@@ -6,58 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **This file (CLAUDE.md)** - Core rules and current state
 2. **ProjectContextEngineering.md** - Technical architecture and decisions
 3. **ProjectTasks.md** - Current tasks and fast start plan
-4. **docs/STRATEGY_CONVERSION_ANALYSIS.md** - Python to TypeScript strategy conversion guide
 
-**🚨 CRITICAL**: Always follow the Base PRP Template v2 methodology for ALL feature development.
+## 🚀 Project: ULTRA Trading Platform MVP
 
-## 🚀 Project: ULTRA Trading Platform
-
-A next-generation trading platform combining fastquant (backtesting) with Alpaca (live trading) on Cloudflare's edge infrastructure.
+A simplified trading platform MVP focused on strategy backtesting, deployed on Vercel with NEON PostgreSQL.
 
 ## 🔄 Project Awareness & Context
 
 - **Always read `ProjectContextEngineering.md`** for technical decisions and architecture
 - **Check `ProjectTasks.md`** before starting work - tasks are prioritized and tracked there
-- **Review `docs/STRATEGY_CONVERSION_ANALYSIS.md`** for strategy conversion patterns
 - **Current State**: 
-  - ✅ AI APIs fully configured (Anthropic Claude + Google Gemini + Cloudflare Workers AI)
-  - ✅ All API keys secured in .env and tested
-  - ✅ Python environment with all dependencies installed
-  - ✅ Strategy conversion analysis completed with TypeScript examples
-  - ✅ Mathematical utilities for options pricing implemented
-  - ✅ Gamma Scalping strategy converted to TypeScript
-  - ✅ Iron Condor strategy fully implemented in TypeScript
-  - ✅ Wheel strategy fully implemented in TypeScript
-  - ✅ Cloudflare Workers project fully initialized
-  - ✅ D1 Database and KV storage configured
-  - ✅ Multi-Agent AI System (7 agents) fully operational
-  - ✅ FastDecisionService consolidated (SmartFastDecisionService merged)
-  - ✅ 0DTE options trading with OptionsFlowAnalyst
-  - ✅ Real-time market scanning with MarketHoursResearcher
-  - ✅ Enhanced RiskManager with LiveStrategyTuner
-  - ✅ MultiAssetConnector for unified trading interface
-  - ✅ IntradayPatternEngine for scalping patterns
-  - ✅ TechnicalIndicators service with @ixjb94/indicators integration
-  - ✅ Production deployed at https://ultra-trading.tkipper.workers.dev
-  - ✅ TypeScript build errors FULLY RESOLVED (0 errors with strict type checking)
-  - ✅ ESLint errors reduced from 418 to 24 (94% improvement)
-  - ✅ All JSON parsing now has proper type assertions
-  - ✅ Type safety across entire codebase with proper error handling
-  - ✅ Anthropic and Google Gemini cookbooks reviewed
-  - ✅ ContextualRAG services implemented (49% retrieval improvement)
-  - 🚧 AutoRAG integration with Cloudflare (in progress)
-  - 🚧 Structured Output services with Gemini (pending)
-  - 🚧 Hierarchical Summarization system (pending)
-  - 🚧 CandlestickPatterns service - 60+ patterns (pending)
-  - 🚧 Knowledge Base infrastructure with D1 + Vectorize (pending)
-  - 🚧 Cloudflare Vectorize indexes configuration (pending)
-  - 🚧 AI Orchestrator integration layer (pending)
-  - 🚧 AfterHoursResearcher agent (pending)
-- **Target State**: Unified platform on Cloudflare Workers with multi-tenant SaaS architecture
+  - ✅ MVP Created: Simple Iron Condor backtester
+  - ✅ NEON PostgreSQL database connected
+  - ✅ Express.js API with backtest endpoints
+  - ✅ Simple HTML/CSS/JS frontend
+  - ✅ Ready for Vercel deployment
+  - ✅ All Cloudflare dependencies removed
+  - ✅ Reduced from 22,558 files to < 10 files
+  - ✅ Reduced from 1.47GB to < 1MB (excluding node_modules)
+- **MVP Location**: `/ultra-mvp` directory
+- **Tech Stack**: Node.js + Express + NEON + Vercel
 - **GitHub Repository**: https://github.com/ScientiaCapital/trading-backtesting
 - **Organization**: ScientiaCapital
-- **Cloudflare Account**: Already available and ready to use
-- **AI Stack**: Anthropic Claude + Google Gemini (NO OpenAI) - WORKING ✅
 
 [... rest of the existing content remains the same ...]
 

@@ -1,0 +1,27 @@
+{
+  "name": "trading-backtesting",
+  "version": "1.0.0",
+  "description": "Trading backtesting project MCP configuration",
+  "mcpServers": {
+    "comment": "Add servers one by one to identify which causes the JSON schema error",
+    "puppeteer": {
+      "command": "/opt/homebrew/bin/mcp-server-puppeteer"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/tmk/Desktop",
+        "/Users/tmk/Documents",
+        "/Users/tmk/Downloads"
+      ]
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": [
+        "@wonderwhy-er/desktop-commander@latest"
+      ]
+    }
+  }
+}

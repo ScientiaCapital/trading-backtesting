@@ -43,7 +43,7 @@ async function testEndpoint(name: string, method: string, endpoint: string, body
     }
     
     const response = await fetch(`${PLATFORM_API_BASE}${endpoint}`, options);
-    const data = await response.json() as ApiResponse<any>;
+    const data = await response.json();
     
     if (data.success) {
       log(`✓ ${name} - SUCCESS`, 'success');

@@ -143,7 +143,7 @@ export class BacktestScheduler {
   }
 
   private async updateSchedule(request: Request): Promise<Response> {
-    const { id, ...updates } = await request.json() as { id: string; [key: string]: any };
+    const { id, ...updates } = await request.json();
     
     const schedule = this.schedules.get(id);
     if (!schedule) {
@@ -154,8 +154,8 @@ export class BacktestScheduler {
     Object.assign(schedule, updates);
     
     // Recalculate next run if schedule changed
-    if (updates['schedule']) {
-      schedule.nextRun = this.calculateNextRun(schedule['schedule']);
+    if (updates.schedule) {
+      schedule.nextRun = this.calculateNextRun(schedule.schedule);
     }
     
     await this.saveSchedules();
@@ -167,7 +167,7 @@ export class BacktestScheduler {
   }
 
   private async deleteSchedule(request: Request): Promise<Response> {
-    const { id } = await request.json() as { id: string };
+    const { id } = await request.json();
     
     if (!this.schedules.has(id)) {
       return new Response('Schedule not found', { status: 404 });
@@ -189,7 +189,7 @@ export class BacktestScheduler {
   }
 
   private async runBacktest(request: Request): Promise<Response> {
-    const { scheduleId, immediate } = await request.json() as { scheduleId?: string; immediate?: boolean };
+    const { scheduleId, immediate } = await request.json();
     
     if (scheduleId) {
       const schedule = this.schedules.get(scheduleId);

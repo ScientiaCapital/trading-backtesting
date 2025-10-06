@@ -252,7 +252,7 @@ export class RealtimeUpdates {
    */
   private async handleBroadcast(request: Request): Promise<Response> {
     try {
-      const message = await request.json() as { channel: string; type: string; data: any; timestamp?: string };
+      const message = await request.json();
       
       await this.broadcastToChannel(message.channel, {
         type: message.type,

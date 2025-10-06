@@ -144,7 +144,7 @@ async function testDecision(scenario: any): Promise<void> {
       })
     });
     
-    const decision = await response.json() as AgentDecision;
+    const decision = await response.json();
     const elapsed = Date.now() - startTime;
     
     console.log(`⏱️  Response Time: ${elapsed}ms`);

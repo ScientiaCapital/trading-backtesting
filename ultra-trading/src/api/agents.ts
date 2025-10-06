@@ -422,10 +422,10 @@ agentRoutes.post('/test/fast-decision', async (c) => {
         }) as any
       );
       
-      const decision = await response.json() as { action: string; confidence: number };
+      const decision = await response.json();
       const endTime = Date.now();
       
-      (results as any[]).push({
+      (results).push({
         iteration: i + 1,
         processingTime: endTime - startTime,
         decision: decision.action,
@@ -434,7 +434,7 @@ agentRoutes.post('/test/fast-decision', async (c) => {
     }
     
     // Calculate statistics
-    const times = results.map(r => (r as any).processingTime);
+    const times = results.map(r => (r).processingTime);
     const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);

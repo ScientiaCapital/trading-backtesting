@@ -26,7 +26,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as ApiResponse<{ name: string; status: string; version: string }>;
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data?.name).toBe('ULTRA Trading Platform');
     expect(json.data?.status).toBe('healthy');
@@ -42,7 +42,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as ApiResponse<{ message: string }>;
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data?.message).toBe('pong');
   });
@@ -57,7 +57,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as ApiResponse<{ service: string; version: string; features: any; limits: any }>;
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data?.service).toBe('ULTRA Trading Platform');
     expect(json.data?.features).toBeDefined();
@@ -74,7 +74,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(200);
     
-    const json = await res.json() as ApiResponse<{ title: string; version: string; endpoints: any }>;
+    const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data?.title).toBe('ULTRA Trading Platform API');
     expect(json.data?.endpoints).toBeDefined();
@@ -90,7 +90,7 @@ describe('Health Check Endpoints', () => {
 
     expect(res.status).toBe(404);
     
-    const json = await res.json() as ApiResponse<any>;
+    const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.error?.code).toBe('NOT_FOUND');
   });

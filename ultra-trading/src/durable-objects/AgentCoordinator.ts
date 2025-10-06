@@ -234,7 +234,7 @@ export class AgentCoordinator {
    * Make a trading decision
    */
   private async makeDecision(request: Request): Promise<Response> {
-    const { context, useQuickDecision = true } = await request.json() as { context: any; useQuickDecision?: boolean };
+    const { context, useQuickDecision = true } = await request.json();
     
     const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
